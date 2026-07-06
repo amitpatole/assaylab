@@ -4,10 +4,10 @@
 confidence bounds, failure-signature root-cause analysis, and analytics that
 support data-driven engineering decisions.
 
-> **Status:** P1–P4 shipped — ingest + failure-signature clustering (P1),
+> **Status:** P1–P5 shipped — ingest + failure-signature clustering (P1),
 > ML root-cause analysis + flaky-vs-real + risk (P2), attested test-selection
-> with a verifiable confidence bound (P3), and the Warm Paper dashboard (P4).
-> LLM-assisted test generation / self-healing (P5) is next.
+> with a verifiable confidence bound (P3), the Warm Paper dashboard (P4), and
+> gated LLM-assisted test generation / self-healing (P5).
 
 ## Try it (no API key, no network)
 
@@ -98,6 +98,24 @@ no network; Warm Paper design system.
 $ assaylab report history.csv -o report.html --title "checkout service"
 wrote dashboard -> report.html
 ```
+
+### LLM-assisted test generation & self-healing (P5)
+
+`assaylab` proposes a regression test (or a flaky mitigation) from a failure
+signature — but it **never executes or applies the generated code**. The
+proposal is a dry-run artifact; you run it in your own sandbox, and acceptance
+is decided by grading that run through the verdict layer:
+
+```console
+$ assaylab generate fail.xml --provider template -o proposal.json   # DRY-RUN (key-free)
+$ assaylab accept proposal.json fail.xml       # a real run that reproduces -> ACCEPTED (exit 0)
+$ assaylab accept proposal.json pass.xml       # does not reproduce      -> REJECTED (exit 1)
+```
+
+Providers: `template` (deterministic, no key), `claude` (`pip install
+assaylab[llm]`, `ANTHROPIC_API_KEY`), `ollama` (local/hosted). A generated test
+is only trusted once it demonstrably reproduces the bug; a heal only once the
+flaky signature stops failing.
 
 ## What it does (planned)
 

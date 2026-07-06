@@ -19,6 +19,7 @@ if TYPE_CHECKING:  # names for type checkers only — no import cost at runtime
     from .config import Settings
     from .core import Assay, analyze, cluster, grade_records, ingest, perceive, to_handoff
     from .dashboard import build_report
+    from .llm import Proposal, evaluate_proposal, propose_heal, propose_test, resolve_provider
     from .models import (
         FailureSignature,
         Issue,
@@ -70,6 +71,11 @@ _LAZY: dict[str, tuple[str, str]] = {
     "Receipt": ("assaylab.attest", "Receipt"),
     "resolve_key": ("assaylab.attest", "resolve_key"),
     "build_report": ("assaylab.dashboard", "build_report"),
+    "propose_test": ("assaylab.llm", "propose_test"),
+    "propose_heal": ("assaylab.llm", "propose_heal"),
+    "evaluate_proposal": ("assaylab.llm", "evaluate_proposal"),
+    "resolve_provider": ("assaylab.llm", "resolve_provider"),
+    "Proposal": ("assaylab.llm", "Proposal"),
 }
 
 
@@ -92,6 +98,7 @@ __all__ = [
     "IssueSource",
     "LogisticModel",
     "Outcome",
+    "Proposal",
     "Receipt",
     "Report",
     "RootCause",
@@ -102,13 +109,17 @@ __all__ = [
     "build_report",
     "categorize",
     "cluster",
+    "evaluate_proposal",
     "grade_records",
     "grade_with_rca",
     "history_stats",
     "ingest",
     "perceive",
+    "propose_heal",
+    "propose_test",
     "rank_risk",
     "resolve_key",
+    "resolve_provider",
     "select",
     "select_and_attest",
     "to_handoff",

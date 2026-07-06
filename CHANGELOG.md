@@ -3,6 +3,32 @@
 All notable changes to assaylab are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow SemVer.
 
+## [Unreleased] — P5: LLM-assisted test generation & self-healing (gated)
+
+### Added
+- **LLM providers** (`assaylab.llm`) behind the `llm` extra: `claude` (Anthropic
+  SDK, `claude-opus-4-8` default, key from `ANTHROPIC_API_KEY`) and `ollama`
+  (local/hosted). A deterministic **`template` provider** needs no API key, so
+  the whole flow runs key-free in demos/tests/CI.
+- **Test generation** (`propose_test`) and **self-healing** (`propose_heal`) —
+  each emits a dry-run `Proposal` with provenance (provider, model, prompt hash)
+  and an acceptance criterion.
+- **The gate** (`evaluate_proposal`) — acceptance flows through the verdict
+  layer: a generated test counts only if a real run shows it *reproduces* the
+  failure; a heal counts only if the flaky signature *stops failing*.
+- **CLI**: `generate`, `heal` (both DRY-RUN), `accept` (grade a real run against
+  a proposal; non-zero if rejected).
+
+### Security
+- **assaylab never executes or applies LLM-authored code.** Proposals are
+  artifacts a human/CI runs in their own sandbox (per the org guardrail:
+  isolate agent-generated code, never in-process `exec`). Pinned by
+  `test_security_llm.py`: no `exec`/`eval`/`subprocess`/`compile` over generated
+  content, `applied` is always False, the gate reads test output (not proposal
+  content), and generate/heal never write or apply files. API keys resolve from
+  env/`~/.config`, never hardcoded or logged; completions are size-capped and
+  network calls timeout-bounded.
+
 ## [Unreleased] — P4: validation-intelligence dashboard (Warm Paper)
 
 ### Added

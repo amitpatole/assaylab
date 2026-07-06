@@ -10,6 +10,7 @@ from ..config import Settings
 # (label, module, hint) — presence probed via find_spec, never imported.
 _OPTIONAL = [
     ("dataset fetch", "httpx", "pip install assaylab[datasets]"),
+    ("LLM (claude)", "anthropic", "pip install assaylab[llm]"),
     ("REST service", "fastapi", "pip install assaylab[serve]"),
     ("MCP server", "mcp", "pip install assaylab[mcp]"),
 ]

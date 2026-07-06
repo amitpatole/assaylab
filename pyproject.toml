@@ -34,10 +34,12 @@ dependencies = [
 [project.optional-dependencies]
 # Heavy / optional surfaces behind extras, lazy-imported.
 datasets = ["httpx>=0.27"]              # fetch public eval corpora (FlakeFlagger, RTPTorrent, IDoFT)
+llm = ["anthropic>=0.40", "httpx>=0.27"]  # LLM-assisted test-gen / self-heal (claude, ollama)
 serve = ["fastapi>=0.110", "uvicorn[standard]>=0.29", "python-multipart>=0.0.9"]
 mcp = ["mcp>=1.2"]
 all = [
     "httpx>=0.27",
+    "anthropic>=0.40",
     "fastapi>=0.110", "uvicorn[standard]>=0.29", "python-multipart>=0.0.9",
     "mcp>=1.2",
 ]

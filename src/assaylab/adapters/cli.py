@@ -281,6 +281,86 @@ def report(
 
 
 @app.command()
+def generate(
+    source: str = typer.Argument(..., help="Test results to derive failure signatures from."),
+    signature: str | None = typer.Option(None, "--signature", help="Target signature id (default: top)."),
+    provider: str = typer.Option("template", "--provider", "-p", help="template | claude | ollama."),
+    backend: str | None = typer.Option(None, "--backend", "-b"),
+    out: str | None = typer.Option(None, "--out", "-o", help="Write the proposal JSON here."),
+) -> None:
+    """Propose a regression test for a failure signature (DRY-RUN — never executed)."""
+    from ..llm import propose_test
+
+    sig = _pick_signature(source, signature, backend)
+    if sig is None:
+        typer.echo("no failure signatures in source.")
+        raise typer.Exit(code=0)
+    proposal = propose_test(sig, provider=provider, created_ts=time.time())
+    _emit_proposal(proposal, out)
+
+
+@app.command()
+def heal(
+    source: str = typer.Argument(..., help="Historical results (to find flaky signatures)."),
+    signature: str | None = typer.Option(None, "--signature"),
+    provider: str = typer.Option("template", "--provider", "-p"),
+    backend: str | None = typer.Option(None, "--backend", "-b"),
+    out: str | None = typer.Option(None, "--out", "-o"),
+) -> None:
+    """Propose a mitigation for a flaky signature (DRY-RUN — never applied)."""
+    from ..llm import propose_heal
+
+    sig = _pick_signature(source, signature, backend)
+    if sig is None:
+        typer.echo("no failure signatures in source.")
+        raise typer.Exit(code=0)
+    proposal = propose_heal(sig, provider=provider, created_ts=time.time())
+    _emit_proposal(proposal, out)
+
+
+@app.command()
+def accept(
+    proposal_path: str = typer.Argument(..., help="A proposal JSON written by generate/heal."),
+    result: str = typer.Argument(..., help="Test output from running the proposal in YOUR sandbox."),
+    backend: str | None = typer.Option(None, "--backend", "-b"),
+) -> None:
+    """Grade a real run against a proposal's acceptance criterion. Non-zero if rejected."""
+    from pathlib import Path as _P
+
+    from ..llm import evaluate_proposal
+    from ..llm.models import Proposal
+
+    proposal = Proposal.model_validate_json(_P(proposal_path).read_text(encoding="utf-8"))
+    ev = evaluate_proposal(proposal, result, backend=backend, settings=Settings())
+    typer.echo(f"{'ACCEPTED' if ev.accepted else 'REJECTED'}: {ev.reason}")
+    raise typer.Exit(code=0 if ev.accepted else 1)
+
+
+def _pick_signature(source: str, sig_id: str | None, backend: str | None):  # type: ignore[no-untyped-def]
+    records = _ingest(source, backend=backend, settings=Settings())
+    sigs = _sig.cluster(records)
+    if not sigs:
+        return None
+    if sig_id:
+        return next((s for s in sigs if s.signature_id == sig_id), None)
+    return sigs[0]
+
+
+def _emit_proposal(proposal, out: str | None) -> None:  # type: ignore[no-untyped-def]
+    typer.echo(f"[{proposal.kind.value}] {proposal.title}")
+    typer.echo(f"  provider={proposal.provider} model={proposal.model or '-'} "
+               f"prompt_sha={proposal.prompt_sha} applied={proposal.applied}")
+    typer.echo(f"  acceptance: {proposal.acceptance}")
+    typer.echo("  --- proposed content (DRY-RUN, not executed) ---")
+    for line in proposal.content.splitlines():
+        typer.echo(f"  {line}")
+    if out:
+        from pathlib import Path as _P
+        _P(out).write_text(proposal.model_dump_json(indent=2), encoding="utf-8")
+        typer.echo(f"  wrote proposal -> {out}")
+
+
+@app.command()
 def demo() -> None:
     """Grade a synthetic broken suite (FAIL) then its fix (PASS). No API key, no network."""
     from ._demo_assets import broken_suite, fixed_suite
