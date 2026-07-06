@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "assaylab"
+version = "0.0.1"
+description = "Validation intelligence for CI — attested test-selection with verifiable confidence bounds, failure-signature RCA, and analytics. Contract-compatible with agentsensory."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Amit Patole", email = "amit.patole@gmail.com" }]
+keywords = ["ci", "testing", "test-selection", "flaky-tests", "root-cause-analysis", "validation", "attestation", "agentsensory"]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.5", "mypy>=1.10"]
+
+[project.urls]
+Homepage = "https://github.com/amitpatole/assaylab"
+Repository = "https://github.com/amitpatole/assaylab"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/assaylab"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+ignore = ["E501", "UP042"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
