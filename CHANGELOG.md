@@ -3,6 +3,30 @@
 All notable changes to assaylab are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow SemVer.
 
+## [Unreleased] — P3: attested test-selection with a verifiable confidence bound
+
+### Added
+- **Selection engine** (`assaylab.select`) — each candidate test has a
+  detection probability `q` (from P2 forecast); skipping set `U` costs
+  confidence `epsilon = 1 - prod(1-q)`. Greedy keep by value-density (`q`/sec)
+  until `target_epsilon` is met or `time_budget_s` is spent. Code-touched tests
+  can be force-kept. Reports speedup + achieved confidence.
+- **Attested receipt** (`assaylab.attest`) — HMAC-SHA256 over the *outcome*
+  (inputs hash, selected/skipped hashes, and the computed `epsilon`), so the
+  signature binds the real result. Constant-time verify. Signing key resolves
+  env → persisted per-installation key (`0600`), **never a hardcoded default**.
+- **Reproduction verification** (`verify_reproduction`) — because selection is
+  deterministic in its committed inputs, a consumer re-runs it to confirm the
+  bound is *genuine*, not merely signed.
+- **CLI**: `select` (subset + signed receipt), `verify` (signature; `--against`
+  recomputes the bound from history).
+- Security regression tests: no default key, entropy floor, `0600` key file,
+  per-install key independence, tamper/forgery detection, inert receipt load.
+
+### Security
+- Ran the forge-a-tighter-bound exploit against the built code: a tampered
+  `epsilon` fails both signature verification and reproduction. Pinned by tests.
+
 ## [Unreleased] — P2: ML-based root-cause analysis
 
 ### Added

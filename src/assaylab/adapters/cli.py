@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 
 import typer
 
@@ -189,6 +190,77 @@ def _isnum(v: object) -> bool:
         return True
     except (TypeError, ValueError):
         return False
+
+
+@app.command()
+def select(
+    source: str = typer.Argument(..., help="Historical results (many runs) to model risk from."),
+    target_epsilon: float | None = typer.Option(None, "--target-epsilon", "-e",
+                                                 help="Keep tests until confidence-lost <= this."),
+    time_budget: float | None = typer.Option(None, "--time-budget", "-t",
+                                             help="Seconds of test time to spend."),
+    changed: str | None = typer.Option(None, "--changed",
+                                       help="Comma-separated changed files; their tests are forced-kept."),
+    backend: str | None = typer.Option(None, "--backend", "-b"),
+    receipt_out: str | None = typer.Option(None, "--receipt", "-o", help="Write the signed receipt here."),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Select a test subset under a confidence/time budget and emit a signed receipt."""
+    from ..select.service import select_and_attest
+
+    if target_epsilon is None and time_budget is None:
+        typer.echo("give --target-epsilon and/or --time-budget")
+        raise typer.Exit(code=2)
+    changed_files = {c.strip() for c in changed.split(",")} if changed else None
+    selection, receipt = select_and_attest(
+        source, target_epsilon=target_epsilon, time_budget_s=time_budget,
+        changed_files=changed_files, created_ts=time.time(), backend=backend, settings=Settings())
+
+    if as_json:
+        typer.echo(json.dumps({"selection": selection.model_dump(),
+                               "receipt": receipt.model_dump()}, indent=2))
+    else:
+        total = len(selection.selected) + len(selection.skipped)
+        typer.echo(f"selected {len(selection.selected)}/{total} tests  "
+                   f"speedup {selection.speedup}x  "
+                   f"confidence {selection.confidence:.4f}  (epsilon {selection.epsilon:.4f})")
+        typer.echo(f"  run:  {', '.join(selection.selected[:8])}"
+                   + (" …" if len(selection.selected) > 8 else ""))
+        typer.echo(f"  skip: {', '.join(selection.skipped[:8])}"
+                   + (" …" if len(selection.skipped) > 8 else ""))
+        typer.echo(f"  receipt {receipt.key_id} sig {receipt.signature[:16]}…")
+    if receipt_out:
+        from pathlib import Path as _P
+        _P(receipt_out).write_text(receipt.model_dump_json(indent=2), encoding="utf-8")
+        typer.echo(f"  wrote signed receipt -> {receipt_out}")
+
+
+@app.command()
+def verify(
+    receipt: str = typer.Argument(..., help="Path to a signed selection receipt (JSON)."),
+    against: str | None = typer.Option(None, "--against",
+                                       help="History source to RECOMPUTE the bound from (proves it's genuine)."),
+    backend: str | None = typer.Option(None, "--backend", "-b"),
+) -> None:
+    """Verify a receipt's signature (constant-time); with --against, also recompute the bound."""
+    from ..select.service import (
+        candidates_from_history,
+        load_receipt,
+        verify_receipt,
+        verify_reproduction,
+    )
+
+    rec = load_receipt(receipt)
+    sig_ok = verify_receipt(rec)
+    typer.echo(f"receipt {rec.key_id}: signature {'VALID' if sig_ok else 'INVALID'}  "
+               f"(epsilon {rec.epsilon:.4f}, confidence {rec.confidence:.4f}, "
+               f"selected {rec.n_selected}/{rec.n_candidates}, speedup {rec.speedup}x)")
+    repro_ok = True
+    if against is not None:
+        cands = candidates_from_history(_ingest(against, backend=backend, settings=Settings()))
+        repro_ok, reason = verify_reproduction(rec, cands)
+        typer.echo(f"  reproduction: {'OK' if repro_ok else 'MISMATCH'} — {reason}")
+    raise typer.Exit(code=0 if (sig_ok and repro_ok) else 1)
 
 
 @app.command()

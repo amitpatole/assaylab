@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 __version__ = "0.1.0"
 
 if TYPE_CHECKING:  # names for type checkers only — no import cost at runtime
+    from .attest import Receipt, resolve_key
     from .config import Settings
     from .core import Assay, analyze, cluster, grade_records, ingest, perceive, to_handoff
     from .models import (
@@ -35,6 +36,7 @@ if TYPE_CHECKING:  # names for type checkers only — no import cost at runtime
         rank_risk,
         train,
     )
+    from .select import Candidate, Selection, select, select_and_attest, verify_receipt
 
 _LAZY: dict[str, tuple[str, str]] = {
     "analyze": ("assaylab.core", "analyze"),
@@ -59,6 +61,13 @@ _LAZY: dict[str, tuple[str, str]] = {
     "history_stats": ("assaylab.rca", "history_stats"),
     "train": ("assaylab.rca", "train"),
     "LogisticModel": ("assaylab.rca", "LogisticModel"),
+    "Candidate": ("assaylab.select", "Candidate"),
+    "Selection": ("assaylab.select", "Selection"),
+    "select": ("assaylab.select", "select"),
+    "select_and_attest": ("assaylab.select", "select_and_attest"),
+    "verify_receipt": ("assaylab.select", "verify_receipt"),
+    "Receipt": ("assaylab.attest", "Receipt"),
+    "resolve_key": ("assaylab.attest", "resolve_key"),
 }
 
 
@@ -74,14 +83,17 @@ def __getattr__(name: str) -> object:
 __all__ = [
     "__version__",
     "Assay",
+    "Candidate",
     "FailureSignature",
     "Issue",
     "IssueKind",
     "IssueSource",
     "LogisticModel",
     "Outcome",
+    "Receipt",
     "Report",
     "RootCause",
+    "Selection",
     "Settings",
     "TestRecord",
     "analyze",
@@ -93,6 +105,10 @@ __all__ = [
     "ingest",
     "perceive",
     "rank_risk",
+    "resolve_key",
+    "select",
+    "select_and_attest",
     "to_handoff",
     "train",
+    "verify_receipt",
 ]

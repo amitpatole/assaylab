@@ -60,6 +60,33 @@ $ assaylab rca history.csv --model flaky.json  # use the learned model
 The flaky model is a pure-Python logistic regression persisted as JSON — no
 heavy ML dependency, and loading a model can't execute code.
 
+### Attested test-selection with a verifiable confidence bound (P3)
+
+The distinctive idea: reduce the suite **and** emit a signed receipt that bounds
+the confidence lost. Each test `t` gets a detection probability `q_t`; skipping
+set `U` costs `ε = 1 − Π(1 − q_t)` — the chance a skipped test would have caught
+a regression. Keep the highest value-density tests until `ε ≤ target`:
+
+```console
+$ export ASSAYLAB_SIGNING_KEY=$(python -c "import secrets;print(secrets.token_hex(32))")
+$ assaylab select history.csv --target-epsilon 0.05 --receipt receipt.json
+selected 3/43 tests  speedup 9.0x  confidence 1.0000  (epsilon 0.0000)
+  run:  svc.Hot::t0, svc.Hot::t1, svc.Hot::t2
+  wrote signed receipt -> receipt.json
+
+$ assaylab verify receipt.json --against history.csv
+receipt a1460d1de5ee: signature VALID  (epsilon 0.0000, confidence 1.0000, selected 3/43, speedup 9.0x)
+  reproduction: OK — reproduced: selection and confidence bound are genuine
+```
+
+Tamper with the receipt's `epsilon` and verification fails closed — the
+signature binds the actual bound, and `--against` re-derives it from the inputs.
+
+**Honest limits** (the receipt's residual assumptions, not guarantees):
+independence of test failures, `q_t` stationarity, and coverage only of
+regression classes seen historically. HMAC is a symmetric trust domain
+(verifier holds the key); asymmetric (ed25519) signatures are future work.
+
 ## What it does (planned)
 
 **Validation intelligence & analytics**
