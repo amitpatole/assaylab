@@ -104,6 +104,94 @@ def perceive(
 
 
 @app.command()
+def rca(
+    source: str = typer.Argument(..., help="Path to (or inline) JUnit XML / outcome CSV-JSON."),
+    backend: str | None = typer.Option(None, "--backend", "-b"),
+    baseline: str | None = typer.Option(None, "--baseline"),
+    model: str | None = typer.Option(None, "--model", help="JSON flaky model (assaylab train)."),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Root-cause analysis: categorize failures, flag flaky-vs-real, score risk. Non-zero on FAIL."""
+    from ..rca.service import analyze as _rca_analyze
+
+    report = asyncio.run(_rca_analyze(source, backend=backend, baseline=baseline,
+                                      model_path=model, settings=Settings()))
+    if as_json:
+        typer.echo(json.dumps(report.model_dump(mode="json"), indent=2))
+    else:
+        typer.echo(f"verdict: {report.verdict.value.upper()}  —  {report.summary}")
+        for i in report.issues:
+            d = i.detail
+            typer.echo(f"  [{i.severity.value}] {i.kind}  cause={d.get('root_cause')} "
+                       f"(conf {d.get('root_cause_confidence')})  flaky={d.get('flaky')} "
+                       f"(p={d.get('flaky_probability')})  risk={d.get('risk')}")
+            typer.echo(f"      {i.message}")
+            typer.echo(f"      why: {d.get('root_cause_evidence')}; {d.get('flaky_evidence')}")
+    raise typer.Exit(code=1 if report.verdict.value == "fail" else 0)
+
+
+@app.command()
+def risk(
+    source: str = typer.Argument(..., help="Historical results (many runs) as JUnit XML / CSV-JSON."),
+    backend: str | None = typer.Option(None, "--backend", "-b"),
+    top: int = typer.Option(20, "--top", help="Show the N riskiest tests."),
+) -> None:
+    """Rank tests by failure risk (recency-weighted fail-rate + flip-rate)."""
+    from ..rca import rank_risk
+    from ..rca.service import stats_for
+
+    ranked = rank_risk(stats_for(source, backend=backend, settings=Settings()))
+    if not ranked:
+        typer.echo("no test history.")
+        raise typer.Exit(code=0)
+    typer.echo(f"{'risk':>6}  {'forecast':>8}  {'fail%':>6}  {'flip%':>6}  test")
+    for r in ranked[:top]:
+        typer.echo(f"{r.score:>6.3f}  {r.forecast:>8.3f}  {r.fail_rate*100:>5.1f}%  "
+                   f"{r.flip_rate*100:>5.1f}%  {r.test_id}")
+
+
+@app.command()
+def train(
+    labeled: str = typer.Argument(..., help="CSV/JSON of signature features + a 'flaky' 0/1 label."),
+    out: str = typer.Option("flaky-model.json", "--out", "-o", help="Where to write the JSON model."),
+) -> None:
+    """Train the flaky-prediction logistic model from labeled feature rows (JSON output)."""
+    import csv as _csv
+    import io as _io
+    import json as _json
+    from pathlib import Path as _Path
+
+    from ..rca.model import train as _train
+
+    raw = _Path(labeled).read_text(encoding="utf-8") if _Path(labeled).is_file() else labeled
+    rows: list[dict] = []
+    s = raw.lstrip()
+    if s.startswith("["):
+        rows = [r for r in _json.loads(s) if isinstance(r, dict)]
+    elif s.startswith("{"):
+        rows = [_json.loads(ln) for ln in s.splitlines() if ln.strip()]
+    else:
+        rows = [dict(r) for r in _csv.DictReader(_io.StringIO(raw))]
+
+    samples: list[tuple[dict[str, float], int]] = []
+    for row in rows:
+        label = int(float(row.get("flaky", 0)))
+        feats = {k: float(v) for k, v in row.items() if k != "flaky" and _isnum(v)}
+        samples.append((feats, label))
+    model = _train(samples)
+    _Path(out).write_text(model.to_json(), encoding="utf-8")
+    typer.echo(f"trained on {len(samples)} rows -> {out} ({len(model.feature_names)} features)")
+
+
+def _isnum(v: object) -> bool:
+    try:
+        float(v)  # type: ignore[arg-type]
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+@app.command()
 def demo() -> None:
     """Grade a synthetic broken suite (FAIL) then its fix (PASS). No API key, no network."""
     from ._demo_assets import broken_suite, fixed_suite

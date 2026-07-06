@@ -104,6 +104,7 @@ class Issue(IssueBase):
         kind: IssueKind = IssueKind.FAILURE_SIGNATURE,
         severity: Severity = Severity.ERROR,
         confidence: Confidence = Confidence.HIGH,
+        extra: dict[str, object] | None = None,
     ) -> Issue:
         ntests = len(sig.tests)
         msg = (
@@ -111,13 +112,16 @@ class Issue(IssueBase):
             f"test{'s' if ntests != 1 else ''} ({sig.count} run{'s' if sig.count != 1 else ''}): "
             f"{sig.sample_message[:200]}"
         )
+        detail = sig.to_detail()
+        if extra:
+            detail.update(extra)
         issue = IssueBase.make(
             kind.value,
             severity,
             msg,
             confidence=confidence,
             source=IssueSource.SIGNATURE_CLUSTER.value,
-            detail=sig.to_detail(),
+            detail=detail,
         )
         return cls(**issue.model_dump())
 

@@ -40,6 +40,26 @@ $ assaylab signatures junit.xml              # list failure signatures, most fre
 $ assaylab perceive junit.xml                # brain-facing Handoff (JSON)
 ```
 
+### Root-cause analysis (P2)
+
+Point `rca` at run history (many runs, ideally with commit + outcome) to get a
+root-cause category, a flaky-vs-real verdict, and a risk score per signature.
+An all-flaky failure set grades **WARN** so flakiness doesn't fail your gate:
+
+```console
+$ assaylab rca history.csv
+verdict: FAIL  —  4 failing execution(s) across 2 signature(s) (1 real, 1 flaky); 4/8 passed.
+  [error]   failure_signature  cause=null_deref (conf 1.0)  flaky=False  risk=0.7
+  [warning] flaky_suspect      cause=timeout   (conf 0.85) flaky=True (p=0.95)  risk=0.53
+
+$ assaylab risk history.csv --top 5          # rank tests by failure risk + forecast
+$ assaylab train labeled.csv -o flaky.json   # fit the flaky model (JSON, never pickle)
+$ assaylab rca history.csv --model flaky.json  # use the learned model
+```
+
+The flaky model is a pure-Python logistic regression persisted as JSON — no
+heavy ML dependency, and loading a model can't execute code.
+
 ## What it does (planned)
 
 **Validation intelligence & analytics**

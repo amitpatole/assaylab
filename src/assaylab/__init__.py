@@ -26,6 +26,15 @@ if TYPE_CHECKING:  # names for type checkers only — no import cost at runtime
         Report,
         TestRecord,
     )
+    from .rca import (
+        LogisticModel,
+        RootCause,
+        categorize,
+        grade_with_rca,
+        history_stats,
+        rank_risk,
+        train,
+    )
 
 _LAZY: dict[str, tuple[str, str]] = {
     "analyze": ("assaylab.core", "analyze"),
@@ -43,6 +52,13 @@ _LAZY: dict[str, tuple[str, str]] = {
     "Outcome": ("assaylab.models", "Outcome"),
     "TestRecord": ("assaylab.models", "TestRecord"),
     "FailureSignature": ("assaylab.models", "FailureSignature"),
+    "grade_with_rca": ("assaylab.rca", "grade_with_rca"),
+    "categorize": ("assaylab.rca", "categorize"),
+    "RootCause": ("assaylab.rca", "RootCause"),
+    "rank_risk": ("assaylab.rca", "rank_risk"),
+    "history_stats": ("assaylab.rca", "history_stats"),
+    "train": ("assaylab.rca", "train"),
+    "LogisticModel": ("assaylab.rca", "LogisticModel"),
 }
 
 
@@ -62,14 +78,21 @@ __all__ = [
     "Issue",
     "IssueKind",
     "IssueSource",
+    "LogisticModel",
     "Outcome",
     "Report",
+    "RootCause",
     "Settings",
     "TestRecord",
     "analyze",
+    "categorize",
     "cluster",
     "grade_records",
+    "grade_with_rca",
+    "history_stats",
     "ingest",
     "perceive",
+    "rank_risk",
     "to_handoff",
+    "train",
 ]
