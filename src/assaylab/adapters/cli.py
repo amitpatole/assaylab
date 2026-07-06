@@ -264,6 +264,23 @@ def verify(
 
 
 @app.command()
+def report(
+    source: str = typer.Argument(..., help="Historical results (JUnit XML / outcome CSV-JSON)."),
+    out: str = typer.Option("assaylab-report.html", "--out", "-o", help="HTML report path."),
+    backend: str | None = typer.Option(None, "--backend", "-b"),
+    title: str = typer.Option("assaylab report", "--title"),
+) -> None:
+    """Generate a self-contained Warm Paper HTML dashboard (RCA + risk + confidence frontier)."""
+    from pathlib import Path as _P
+
+    from ..dashboard import build_report
+
+    html = build_report(source, backend=backend, title=title, settings=Settings())
+    _P(out).write_text(html, encoding="utf-8")
+    typer.echo(f"wrote dashboard -> {out} ({len(html)} bytes)")
+
+
+@app.command()
 def demo() -> None:
     """Grade a synthetic broken suite (FAIL) then its fix (PASS). No API key, no network."""
     from ._demo_assets import broken_suite, fixed_suite

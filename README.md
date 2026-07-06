@@ -4,9 +4,10 @@
 confidence bounds, failure-signature root-cause analysis, and analytics that
 support data-driven engineering decisions.
 
-> **Status:** P1 shipped — ingest + failure-signature clustering, graded on the
-> `agentsensory` contract. RCA/forecasting (P2), attested selection (P3) and the
-> dashboard (P4) follow.
+> **Status:** P1–P4 shipped — ingest + failure-signature clustering (P1),
+> ML root-cause analysis + flaky-vs-real + risk (P2), attested test-selection
+> with a verifiable confidence bound (P3), and the Warm Paper dashboard (P4).
+> LLM-assisted test generation / self-healing (P5) is next.
 
 ## Try it (no API key, no network)
 
@@ -86,6 +87,17 @@ signature binds the actual bound, and `--against` re-derives it from the inputs.
 independence of test failures, `q_t` stationarity, and coverage only of
 regression classes seen historically. HMAC is a symmetric trust domain
 (verifier holds the key); asymmetric (ed25519) signatures are future work.
+
+### Dashboard (P4)
+
+One self-contained HTML report — verdict, failure signatures + root cause,
+riskiest tests, and the confidence/speedup frontier as an inline SVG. No server,
+no network; Warm Paper design system.
+
+```console
+$ assaylab report history.csv -o report.html --title "checkout service"
+wrote dashboard -> report.html
+```
 
 ## What it does (planned)
 

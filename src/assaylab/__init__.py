@@ -18,6 +18,7 @@ if TYPE_CHECKING:  # names for type checkers only — no import cost at runtime
     from .attest import Receipt, resolve_key
     from .config import Settings
     from .core import Assay, analyze, cluster, grade_records, ingest, perceive, to_handoff
+    from .dashboard import build_report
     from .models import (
         FailureSignature,
         Issue,
@@ -68,6 +69,7 @@ _LAZY: dict[str, tuple[str, str]] = {
     "verify_receipt": ("assaylab.select", "verify_receipt"),
     "Receipt": ("assaylab.attest", "Receipt"),
     "resolve_key": ("assaylab.attest", "resolve_key"),
+    "build_report": ("assaylab.dashboard", "build_report"),
 }
 
 
@@ -97,6 +99,7 @@ __all__ = [
     "Settings",
     "TestRecord",
     "analyze",
+    "build_report",
     "categorize",
     "cluster",
     "grade_records",

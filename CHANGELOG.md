@@ -3,6 +3,20 @@
 All notable changes to assaylab are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow SemVer.
 
+## [Unreleased] — P4: validation-intelligence dashboard (Warm Paper)
+
+### Added
+- **Self-contained HTML report** (`assaylab.dashboard.build_report`, CLI
+  `assaylab report`) — verdict, failure signatures + root cause, riskiest
+  tests, and the **confidence/speedup frontier** as a dependency-free inline
+  SVG. No server, no network (branded fonts load progressively, degrade to
+  system stacks). Warm Paper design system; accent is a desaturated
+  validation-green; carries the `— amitpatole` maker's mark.
+- All dynamic text is HTML-escaped — untrusted test messages cannot inject
+  markup (XSS regression test pins this).
+- `infer_backend` now treats non-`<` inline content as `jsonl` (CSV/JSON), so
+  inline outcome logs parse correctly.
+
 ## [Unreleased] — P3: attested test-selection with a verifiable confidence bound
 
 ### Added

@@ -45,10 +45,6 @@ def infer_backend(source: str) -> str:
         return "junit"
     if suffix in (".json", ".jsonl", ".ndjson", ".csv"):
         return "jsonl"
-    # Inline content: sniff the first non-space char.
-    head = source.lstrip()[:1]
-    if head == "<":
-        return "junit"
-    if head in ("[", "{"):
-        return "jsonl"
-    return "junit"
+    # Inline content: only XML starts with '<'; everything else (JSON/JSONL/CSV)
+    # is handled by the jsonl backend.
+    return "junit" if source.lstrip()[:1] == "<" else "jsonl"
