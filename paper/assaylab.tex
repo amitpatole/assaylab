@@ -1,0 +1,319 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+
+\definecolor{accent}{HTML}{3C6B4C}
+\titleformat{\section}{\large\bfseries\color{accent}}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+\hypersetup{colorlinks=true, linkcolor=accent, urlcolor=accent, citecolor=accent}
+
+\newcommand{\eps}{\varepsilon}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{\vspace{-2em}\textbf{Attested Test Selection with a Verifiable Confidence Bound}\\
+\large A validation-intelligence layer for continuous integration}
+\author{Amit Patole\\
+\small \href{https://orcid.org/0009-0009-6514-0913}{ORCID: 0009-0009-6514-0913}\\
+\small \texttt{amit.patole@gmail.com}}
+\date{July 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Regression test suites grow until running them on every change becomes the
+dominant cost of continuous integration (CI). Test-selection and
+test-prioritization tools reduce that cost by running a subset of the suite, but
+they return a \emph{speedup} and ask the engineer to trust that the omitted
+tests would not have caught anything. We present \textbf{assaylab}, a
+validation-intelligence layer that reduces a suite \emph{and} emits a signed,
+independently re-derivable receipt that \emph{bounds the confidence lost}: given
+a subset $S$ and a skipped set $U$, the receipt commits to
+$\eps = 1 - \prod_{t \in U}(1 - q_t)$, an upper bound on the probability that at
+least one skipped test would have failed, where $q_t$ is each test's modelled
+detection probability estimated from history. The bound is bound into an
+HMAC-SHA256 or ed25519 signature over the actual outcome, so a consumer can
+verify authenticity and, because selection is deterministic in its committed
+inputs, recompute the bound to confirm it is genuine rather than merely signed.
+assaylab additionally clusters failures into root-cause signatures and
+distinguishes flaky failures from real ones, feeding the per-test probabilities
+the bound relies on. On the FlakeFlagger public dataset (26{,}765 tests, each
+rerun 10{,}000 times), using the \emph{measured} per-run failure rates as $q_t$,
+assaylab selected a subset achieving a \textbf{35.9$\times$} reduction in
+test-time while the realized regression-miss rate ($0.049957$) stayed within the
+bound the receipt claimed ($0.049958$). The implementation is open source, was
+hardened over five independent adversarial review rounds, and is available on
+PyPI.
+\end{abstract}
+
+\section{Introduction}
+
+As a codebase and its test suite grow, running every test on every change
+becomes the bottleneck of CI. The standard responses --- regression test
+selection (RTS) and test-case prioritization (TCP) --- run only a subset of the
+suite, trading coverage for speed. The engineering objection is trust: when a
+tool skips 90\% of the suite and the build is green, what is the actual
+probability that a regression slipped through the skipped tests? Existing tools
+report a speedup and a heuristic; they do not attach a checkable, quantitative
+statement of the risk incurred, and they certainly do not attach a
+\emph{verifiable} one that a downstream consumer --- a release gate, an auditor,
+a compliance process --- can confirm without re-running the analysis or trusting
+the producer.
+
+This paper describes \textbf{assaylab}, whose distinctive contribution is
+\emph{attested test selection with a verifiable confidence bound}. Concretely:
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+  \item A selection engine that chooses a subset under a target confidence loss
+        $\eps$ or a time budget and reports the achieved $\eps$
+        (Section~\ref{sec:selection}).
+  \item A signed receipt that binds the \emph{actual outcome} --- the committed
+        inputs, the selected and skipped sets, and $\eps$ --- so the signature
+        certifies what happened, not merely that a run happened
+        (Section~\ref{sec:attest}).
+  \item Independent re-derivation: because selection is deterministic in its
+        committed inputs, a verifier recomputes $\eps$ and confirms the receipt
+        reproduces (Section~\ref{sec:attest}).
+  \item An evidence layer --- failure-signature clustering, root-cause
+        categorization, and flaky-vs-real classification --- that supplies the
+        per-test detection probabilities the bound consumes
+        (Section~\ref{sec:evidence}).
+\end{enumerate}
+
+We evaluate the bound on real data (Section~\ref{sec:eval}) and report an
+adversarial security review of the signing and gating machinery
+(Section~\ref{sec:security}), then state the assumptions the bound rests on
+honestly (Section~\ref{sec:limits}).
+
+\section{Background and Related Work}
+
+\textbf{Flaky tests.} A flaky test passes and fails without any code change.
+iDFlakies~\cite{idflakies} framed detection-by-rerunning and produced the IDoFT
+category registry; FlakeFlagger~\cite{flakeflagger} predicts flakiness from
+static and dynamic features \emph{without} rerunning, and ships a dataset in
+which each of 26{,}765 tests was rerun 10{,}000 times to establish ground truth.
+DeFlaker~\cite{deflaker} detects flakiness via change-coverage. We use the
+FlakeFlagger dataset both for flaky prediction and, novelly, as a source of
+measured per-test failure rates against which to validate our confidence bound.
+
+\textbf{Regression test selection / prioritization.} RTS and TCP have a large
+literature; RTPTorrent~\cite{rtptorrent} provides commit-linked test-execution
+histories for evaluating prioritization, and TravisTorrent~\cite{travistorrent}
+supplies broad CI build outcomes. These works optimize \emph{which} tests to run
+and \emph{in what order}; to our knowledge none attach a signed, re-derivable
+bound on the confidence lost by the tests they skip. That combination ---
+selection plus an attested, checkable risk statement --- is the gap assaylab
+addresses.
+
+\section{The Evidence Layer}
+\label{sec:evidence}
+
+assaylab ingests test outcomes (JUnit/xUnit XML, or an outcome
+CSV/JSON schema of \code{(project, commit, test\_id, run\_id, verdict,
+duration)}) and produces a graded \emph{report} on a shared verdict contract
+(pass/warn/fail plus grounded issues).
+
+\textbf{Failure-signature clustering.} Failing executions are normalized ---
+memory addresses, line numbers, temporary paths, timestamps, and UUIDs are
+stripped --- and fingerprinted on the templated exception type, message, and top
+stack frames, so runs that differ only in incidental detail collapse into a
+single \emph{signature}. This is the unit on which root cause and risk are
+assessed.
+
+\textbf{Root cause and flaky-vs-real.} Each signature is categorized (null
+dereference, timeout, dependency, configuration, resource, concurrency, network,
+assertion, \ldots) with a confidence and the matched evidence. A signature is
+flagged \emph{flaky} when a single commit exhibits both a pass and a failure
+(order-agnostic flakiness) or a high pass/fail flip rate across runs; an
+all-flaky failure set grades \emph{warn} rather than \emph{fail}, so flakiness
+does not block the gate. A per-test risk score (recency-weighted failure rate
+blended with instability) and a next-run failure forecast provide the detection
+probability $q_t$ that the selection bound consumes.
+
+\section{Selection with a Confidence Bound}
+\label{sec:selection}
+
+Let each candidate test $t$ carry a detection probability $q_t \in [0,1]$ --- the
+modelled chance it fails (and thus catches a regression) on this run. If we run
+subset $S$ and skip $U = \text{All} \setminus S$, then \emph{under an
+independence assumption} the probability that at least one skipped test would
+have failed is
+\begin{equation}
+\eps \;=\; 1 - \prod_{t \in U}\bigl(1 - q_t\bigr).
+\label{eq:eps}
+\end{equation}
+We call $\eps$ the \emph{confidence lost} by skipping $U$: it is an upper-bound
+proxy for the chance of missing a regression the suite would have caught.
+Selection keeps the highest value-density tests ($q_t$ per unit time) until
+either $\eps \le \eps_{\text{target}}$ or a time budget is exhausted; tests
+touched by a code change can be force-kept. The achieved $\eps$ is always
+reported and rounded \emph{up}, so the bound is never understated.
+
+Naively evaluating Eq.~\eqref{eq:eps} at each greedy step is cubic in the number
+of distinct tests; assaylab maintains a running product with a separate
+zero-factor count (for $q_t = 1$), making selection $O(n \log n)$ after the sort
+--- important because the candidate set is derived from an untrusted corpus and
+must not become a compute-exhaustion vector.
+
+\section{Attested, Re-derivable Receipts}
+\label{sec:attest}
+
+A selection emits a \emph{receipt} that commits, in a canonical serialization,
+to: a hash of the candidate set and its $q$/duration inputs; the hashes and
+sizes of the selected and skipped sets; the achieved $\eps$ and confidence; a
+per-receipt nonce; and the tool version. The receipt is signed over exactly
+these bytes, so the signature binds \emph{what actually happened}, not merely
+that a run occurred. Two signing modes are provided:
+
+\begin{itemize}[leftmargin=1.4em,itemsep=2pt]
+  \item \textbf{HMAC-SHA256} (default) --- a symmetric trust domain: the verifier
+        holds the key. The key is resolved from the environment or a persisted
+        per-installation random key; there is no shipped default secret, and
+        verification is constant-time.
+  \item \textbf{ed25519} (asymmetric) --- the producer signs with a private key
+        and publishes the public key; any external consumer verifies against the
+        trusted public key \emph{without holding any secret}. This makes ``an
+        external consumer verifies'' real rather than aspirational.
+\end{itemize}
+
+Crucially, a signature proves only that \emph{some key-holder committed} to an
+$\eps$. Because selection is deterministic in the inputs the receipt commits to,
+a consumer that holds the candidate inputs can \emph{recompute} the selection
+and confirm the receipt reproduces --- the bound is genuine, not merely signed.
+A receipt whose $\eps$ has been forged fails both the signature check and the
+reproduction check.
+
+\section{Security}
+\label{sec:security}
+
+The signing, key-handling, and acceptance-gating machinery has attack surface,
+so it was subjected to an adversarial review: \textbf{five independent rounds},
+each a fresh attempt to forge a receipt, weaken a bound, or exhaust a resource,
+with fixes applied between rounds and the process continued until a full round
+produced no new exploitable finding. Confirmed issues found and closed (each
+pinned by a regression test that runs the exploit and shows it blocked) include:
+a signing-key symlink/TOCTOU vector enabling forgery; an $O(n^3)$
+compute-exhaustion path in selection reachable from an untrusted corpus (fixed to
+$O(n\log n)$); a non-finite-float path that split the signed bytes from the
+stored bytes; and, in the LLM-assisted module (below), a trust-boundary defect
+where a hand-crafted proposal could weaken its own acceptance criteria --- closed
+by signing proposals at generation and refusing to grade a tampered one. The
+core HMAC construction, canonicalization, and constant-time verification survived
+every round.
+
+We do not claim the system is unexploitable. What is verified is narrower and
+honest: every \emph{discovered} vector is closed and regression-pinned, and the
+machinery survived five adversarial rounds ending empty. Residual risk that no
+audit eliminates is stated in Section~\ref{sec:limits}.
+
+\paragraph{LLM-assisted generation, gated.} assaylab can propose a regression
+test from a signature, or a mitigation for a flaky one, using an LLM. It
+\emph{never executes or applies the generated code}: a proposal is a dry-run
+artifact, run only by a human or CI in their own sandbox, and acceptance flows
+back through the verdict layer --- a generated test counts only if a real run
+shows it reproduces the failure with the original signature; a heal counts only
+if the flaky signature stops failing across distinct reruns.
+
+\section{Evaluation}
+\label{sec:eval}
+
+We evaluate on the FlakeFlagger dataset~\cite{flakeflagger} (Zenodo 4450723, CC
+BY 4.0): 26{,}765 tests across 23 Java projects, each rerun 10{,}000 times.
+
+\subsection{The confidence bound holds on real data}
+
+For each test we take its \emph{measured} per-run failure probability
+(failing reruns over total reruns) as $q_t$ and run selection at a target
+confidence loss of $\eps_{\text{target}} = 0.05$. Table~\ref{tab:bound} reports
+the outcome. The selected subset yields a \textbf{35.9$\times$} reduction in
+test-time, and the realized miss rate computed on the measured rates
+($0.049957$) is \emph{within} the bound the receipt committed to ($0.049958$):
+the receipt's $\eps$ is not a marketing figure but a statement that matches
+reality on real failure data.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lr}
+\toprule
+Tests & 26{,}765 \\
+Target $\eps$ & 0.05 \\
+Claimed $\eps$ (signed) & 0.049958 \\
+Realized miss rate & 0.049957 \\
+Test-time speedup & 35.9$\times$ \\
+Bound holds (realized $\le$ claimed) & yes \\
+\bottomrule
+\end{tabular}
+\caption{Confidence-bound validation on FlakeFlagger measured failure rates.}
+\label{tab:bound}
+\end{table}
+
+\subsection{Flaky prediction from features (baseline)}
+
+As a secondary check we train assaylab's built-in, dependency-free logistic
+model on FlakeFlagger's feature table (70/30 held-out split; decision threshold
+selected on the training split only, since the set is 0.7\% positive). It
+attains precision $0.34$, recall $0.26$, $F_1 = 0.29$. This is a deliberately
+lightweight baseline: FlakeFlagger's own tuned random forest reports higher
+$F_1$ (${\approx}0.6$); assaylab trades accuracy for an inspectable,
+JSON-serializable model that carries no heavy dependency and cannot execute code
+on load. The point of the paper is the confidence bound above, for which the
+flaky/real signal is an input.
+
+\section{Limitations and Residual Risk}
+\label{sec:limits}
+
+The bound of Eq.~\eqref{eq:eps} rests on stated assumptions, not guarantees:
+\emph{independence} of test failures; \emph{stationarity} of $q_t$ (history
+predicts the next run); and coverage only of \emph{regression classes seen
+historically}. Correlated failures or a novel regression class are outside the
+model. On the attestation side: HMAC is a symmetric trust domain (mitigated by
+the ed25519 mode); receipts are stateless, so freshness/replay must be enforced
+consumer-side (a nonce ledger plus a max-age window); and the acceptance gate
+trusts the run output a user supplies from their own sandbox. These are design
+boundaries, honestly disclosed, not defects.
+
+\section{Conclusion}
+
+assaylab reframes test-suite reduction as an \emph{attestable} operation: it does
+not merely run fewer tests, it emits a signed, independently re-derivable
+statement of the confidence lost. On real measured failure data the bound holds
+at a 35.9$\times$ speedup, and the machinery that produces it survived five
+rounds of adversarial review. We hope the ``speedup with a checkable bound''
+framing is useful beyond this implementation --- any selection tool can, in
+principle, attach and sign a confidence statement rather than asking for trust.
+
+\section*{Availability}
+
+Source: \url{https://github.com/amitpatole/assaylab} (MIT). Package:
+\url{https://pypi.org/project/assaylab/} (\code{pip install assaylab}).
+Documentation: \url{https://amitpatole.github.io/assaylab/}. The software release
+archived alongside this paper carries its own DOI, cross-referenced in the Zenodo
+record.
+
+\begin{thebibliography}{9}
+\bibitem{idflakies} W. Lam, R. Oei, A. Shi, D. Marinov.
+  \emph{iDFlakies: A Framework for Detecting and Partially Classifying Flaky
+  Tests}. ICST, 2019.
+\bibitem{flakeflagger} A. Alshammari, C. Morris, M. Hilton, J. Bell.
+  \emph{FlakeFlagger: Predicting Flakiness Without Rerunning Tests}. ICSE, 2021.
+  Dataset: Zenodo 4450723 (CC BY 4.0).
+\bibitem{deflaker} J. Bell, O. Legunsen, M. Hilton, L. Eloussi, T. Yung,
+  D. Marinov. \emph{DeFlaker: Automatically Detecting Flaky Tests}. ICSE, 2018.
+\bibitem{rtptorrent} T. Mattis, P. Rein, F. D\"ursch, R. Hirschfeld.
+  \emph{RTPTorrent: An Open-source Dataset for Evaluating Regression Test
+  Prioritization}. MSR, 2020.
+\bibitem{travistorrent} M. Beller, G. Gousios, A. Zaidman.
+  \emph{TravisTorrent: Synthesizing Travis CI and GitHub for Full-Stack Research
+  on Continuous Integration}. MSR, 2017.
+\end{thebibliography}
+
+\end{document}

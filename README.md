@@ -1,8 +1,15 @@
 # assaylab
 
+[![Paper DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21231687.svg)](https://doi.org/10.5281/zenodo.21231687)
+[![Software DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21230859.svg)](https://doi.org/10.5281/zenodo.21230859)
+[![PyPI](https://img.shields.io/pypi/v/assaylab.svg)](https://pypi.org/project/assaylab/)
+
 **Validation intelligence for CI.** Attested test-selection with verifiable
 confidence bounds, failure-signature root-cause analysis, and analytics that
 support data-driven engineering decisions.
+
+> **Paper:** *Attested Test Selection with a Verifiable Confidence Bound*,
+> A. Patole (2026). [doi:10.5281/zenodo.21231687](https://doi.org/10.5281/zenodo.21231687)
 
 > **Status:** P1–P5 shipped — ingest + failure-signature clustering (P1),
 > ML root-cause analysis + flaky-vs-real + risk (P2), attested test-selection
@@ -143,6 +150,22 @@ with an attested, checkable proof. Speedup **with** a formal confidence claim.
 
 Verdicts follow the `agentsensory` contract (Report = verdict + grounded issues
 + Handoff), so results are portable and auditable.
+
+## Citation
+
+If you use assaylab in academic work, please cite the paper:
+
+```bibtex
+@misc{patole2026assaylab,
+  title        = {Attested Test Selection with a Verifiable Confidence Bound},
+  author       = {Patole, Amit},
+  year         = {2026},
+  doi          = {10.5281/zenodo.21231687},
+  howpublished = {\url{https://doi.org/10.5281/zenodo.21231687}}
+}
+```
+
+Software archive: [doi:10.5281/zenodo.21230859](https://doi.org/10.5281/zenodo.21230859).
 
 MIT © 2026 Amit Patole
 

@@ -18,6 +18,16 @@ url: "https://amitpatole.github.io/assaylab/"
 license: MIT
 version: "0.3.0"
 date-released: "2026-07-06"
+doi: "10.5281/zenodo.21230859"
+preferred-citation:
+  type: article
+  title: "Attested Test Selection with a Verifiable Confidence Bound"
+  authors:
+    - family-names: Patole
+      given-names: Amit
+      orcid: "https://orcid.org/0009-0009-6514-0913"
+  year: 2026
+  doi: "10.5281/zenodo.21231687"
 keywords:
   - continuous integration
   - test selection
