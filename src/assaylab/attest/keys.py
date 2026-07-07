@@ -61,14 +61,36 @@ def _decode_env_key(raw: str) -> bytes:
     return val
 
 
+_O_NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)  # 0 on platforms without it (e.g. Windows)
+
+
 def _key_path() -> Path:
     return Path(user_config_dir("assaylab")) / "signing.key"
 
 
+def _reject_symlinked_ancestors(path: Path) -> None:
+    """Fail closed if any existing ancestor of ``path`` is a symlink (Finding 2).
+
+    ``O_NOFOLLOW`` only guards the final component; a symlinked *parent* could
+    still redirect the read/create. We walk the ancestors and refuse any symlink.
+    """
+    for parent in path.parents:
+        if parent.is_symlink():
+            raise ConfigError(f"refusing signing key under symlinked directory {parent}")
+        if not parent.exists():
+            continue
+
+
+def _owned_by_us(st: os.stat_result) -> bool:
+    geteuid = getattr(os, "geteuid", None)
+    return geteuid is None or st.st_uid == geteuid()
+
+
 def _open_no_symlink_read(path: Path) -> bytes | None:
     """Read a regular, owner-owned file without following symlinks. None if absent."""
+    _reject_symlinked_ancestors(path)
     try:
-        fd = os.open(str(path), os.O_RDONLY | os.O_NOFOLLOW)
+        fd = os.open(str(path), os.O_RDONLY | _O_NOFOLLOW)
     except FileNotFoundError:
         return None
     except OSError as e:
@@ -78,7 +100,7 @@ def _open_no_symlink_read(path: Path) -> bytes | None:
         st = os.fstat(fd)
         if not stat.S_ISREG(st.st_mode):
             raise ConfigError(f"signing key at {path} is not a regular file — refusing")
-        if st.st_uid != os.geteuid():
+        if not _owned_by_us(st):
             raise ConfigError(f"signing key at {path} is not owned by the current user — refusing")
         if st.st_size > 4096:  # a key is 32 bytes; anything large is wrong
             raise ConfigError(f"signing key at {path} is implausibly large — refusing")
@@ -96,12 +118,13 @@ def _load_or_create_persisted() -> bytes:
     # Create fresh. mkdir the parent 0700, then O_CREAT|O_EXCL|O_NOFOLLOW 0600 so
     # a pre-planted symlink or file can't be followed/reused (H1).
     path.parent.mkdir(parents=True, exist_ok=True)
+    _reject_symlinked_ancestors(path)  # no symlinked ancestor may redirect the write (Finding 2)
     try:
         os.chmod(path.parent, 0o700)
     except OSError:
         pass
     key = secrets.token_bytes(32)
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | _O_NOFOLLOW
     try:
         fd = os.open(str(path), flags, stat.S_IRUSR | stat.S_IWUSR)
     except FileExistsError:

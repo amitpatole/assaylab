@@ -35,6 +35,8 @@ class Candidate:
 
     @property
     def clamped_q(self) -> float:
+        if not math.isfinite(self.q):  # inf/nan from an untrusted corpus -> treat as no signal
+            return 0.0
         return min(1.0, max(0.0, self.q))
 
 

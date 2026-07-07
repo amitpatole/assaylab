@@ -11,10 +11,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..attest.keys import resolve_key
 from ..config import Settings
 from ..core import signature as _sig
 from ..core.ingest import ingest
 from .models import Proposal
+
+# Hardcoded floor on passing evidence for a heal — never trusted from the proposal.
+_MIN_PASS_FLOOR = 2
 
 
 @dataclass
@@ -30,8 +34,20 @@ def evaluate_proposal(
     backend: str | None = None,
     settings: Settings | None = None,
 ) -> Evaluation:
-    """Grade the returned run and decide whether the proposal is accepted."""
+    """Grade the returned run and decide whether the proposal is accepted.
+
+    The proposal is treated as UNTRUSTED: its signature must verify (it was
+    signed at generation by the tool that derived the criteria from a real
+    signature), or we refuse to grade it. This stops a hand-crafted proposal
+    JSON from weakening its own acceptance criteria.
+    """
     settings = settings or Settings()
+    if not proposal.verify(resolve_key()):
+        return Evaluation(
+            False,
+            "proposal signature is missing or invalid — refusing to grade an untrusted proposal "
+            "(only an assaylab-generated proposal signed with this install's key can be verified)",
+        )
     records = ingest(result_source, backend=backend, settings=settings)
     check = proposal.acceptance.get("check")
 
@@ -66,31 +82,41 @@ def evaluate_proposal(
         sig_id = str(proposal.acceptance.get("signature_id", ""))
         raw_targets = proposal.acceptance.get("target_tests", [])
         target_tests = {str(t) for t in raw_targets} if isinstance(raw_targets, (list, tuple, set)) else set()
-        raw_min = proposal.acceptance.get("min_pass_runs", 2)
-        min_pass = int(raw_min) if isinstance(raw_min, (int, float, str)) else 2
+        raw_min = proposal.acceptance.get("min_pass_runs", _MIN_PASS_FLOOR)
+        req_min = int(raw_min) if isinstance(raw_min, (int, float, str)) else _MIN_PASS_FLOOR
+        # Never trust a below-floor threshold from the proposal (defence in depth
+        # even though the signature already binds it).
+        min_pass = max(_MIN_PASS_FLOOR, req_min)
 
-        if target_tests:
-            present = {r.test_id for r in records}
-            missing = sorted(target_tests - present)
-            if missing:
-                return Evaluation(False, f"target test(s) absent from the run: {missing}")
-            target_recs = [r for r in records if r.test_id in target_tests]
-        else:
-            target_recs = records
+        # A heal MUST name its target tests; an empty set can't be positively verified.
+        if not target_tests:
+            return Evaluation(False, "heal names no target tests — cannot confirm a fix")
+        present = {r.test_id for r in records}
+        missing = sorted(target_tests - present)
+        if missing:
+            return Evaluation(False, f"target test(s) absent from the run: {missing}")
+        target_recs = [r for r in records if r.test_id in target_tests]
 
         if any(r.outcome.failed for r in target_recs):
             return Evaluation(False, "a target test still failed after the heal")
-        passes = sum(1 for r in target_recs if r.outcome == Outcome.PASS)
+        # Count DISTINCT reruns, not raw records — duplicate rows for one run must
+        # not inflate the passing evidence. A rerun is a (test_id, run_id) pair;
+        # commit is the fallback key when run_id is absent.
+        distinct_passes = {
+            (r.test_id, r.run_id or r.commit)
+            for r in target_recs if r.outcome == Outcome.PASS
+        }
+        passes = len(distinct_passes)
         if passes < min_pass:
             return Evaluation(
                 False,
-                f"insufficient passing evidence ({passes} < {min_pass}) — a skip, single lucky "
-                f"pass, or empty run does not confirm a heal",
+                f"insufficient distinct passing reruns ({passes} < {min_pass}) — a skip, single "
+                f"pass, empty run, or duplicated record does not confirm a heal",
             )
         if any(s.signature_id == sig_id for s in _sig.cluster(records)):
             return Evaluation(False, f"signature {sig_id} still present after the heal")
         return Evaluation(
-            True, f"signature {sig_id} no longer fails; {passes} passing run(s) of target test(s)"
+            True, f"signature {sig_id} no longer fails; {passes} distinct passing rerun(s)"
         )
 
     return Evaluation(False, f"unknown acceptance check {check!r}")

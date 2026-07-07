@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
+import json
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -38,6 +40,29 @@ class Proposal(BaseModel):
 
     applied: bool = False          # invariant: assaylab never applies a proposal
     status: str = "proposed"       # proposed | accepted | rejected
+
+    # HMAC over the trust-relevant fields, set at generation. The gate refuses to
+    # grade a proposal whose signature doesn't verify — so a hand-crafted JSON
+    # can't weaken its own acceptance criteria (they're bound to the tool that
+    # derived them from a real signature).
+    key_id: str = ""
+    signature: str = ""
+
+    def signed_body(self) -> bytes:
+        """Canonical bytes covered by the signature (everything but the signature)."""
+        data = self.model_dump(exclude={"signature"})
+        return json.dumps(data, sort_keys=True, separators=(",", ":"),
+                          allow_nan=False).encode("utf-8")
+
+    def sign(self, key: bytes) -> Proposal:
+        self.signature = hmac.new(key, self.signed_body(), hashlib.sha256).hexdigest()
+        return self
+
+    def verify(self, key: bytes) -> bool:
+        if not self.signature:
+            return False
+        expected = hmac.new(key, self.signed_body(), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(expected, self.signature)
 
 
 def prompt_sha(prompt: str) -> str:

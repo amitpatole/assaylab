@@ -32,9 +32,9 @@ def read_source(source: str, *, settings: Settings) -> str:
     """Read ``source`` as text, enforcing the byte cap *before* allocation.
 
     ``source`` is treated as a filesystem path when it points at an existing
-    file; otherwise it is treated as inline content. The size cap is checked
-    against the file's ``stat`` size (path) or the string length (inline) so an
-    attacker cannot force an unbounded read.
+    file; otherwise it is treated as inline content. The cap is enforced by
+    reading at most ``cap`` bytes and refusing if more remain — not by a prior
+    ``stat`` (which a concurrent writer could grow past between check and read).
     """
     cap = settings.max_source_bytes
     p = Path(source)
@@ -43,10 +43,11 @@ def read_source(source: str, *, settings: Settings) -> str:
     except OSError:
         is_file = False
     if is_file:
-        size = p.stat().st_size
-        if size > cap:
-            raise UnsafeSourceError(f"source exceeds size cap ({size} > {cap} bytes)")
-        return p.read_text(encoding="utf-8", errors="replace")
+        with p.open("rb") as f:
+            data = f.read(cap + 1)  # read one byte past the cap to detect overflow
+        if len(data) > cap:
+            raise UnsafeSourceError(f"source exceeds size cap (> {cap} bytes)")
+        return data.decode("utf-8", errors="replace")
     if len(source.encode("utf-8", "replace")) > cap:
         raise UnsafeSourceError("inline source exceeds size cap")
     return source

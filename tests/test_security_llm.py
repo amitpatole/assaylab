@@ -26,6 +26,34 @@ def test_proposal_is_never_marked_applied() -> None:
     assert propose_test(_sig(), provider="template", created_ts=1.0).applied is False
 
 
+def test_gate_refuses_tampered_proposal(monkeypatch) -> None:
+    # Round-2 HIGH: a hand-crafted/tampered proposal can't weaken its own gate.
+    from assaylab.llm import evaluate_proposal, propose_heal
+
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "hex:" + "0123456789abcdef" * 4)
+    proposal = propose_heal(_sig(), provider="template", created_ts=1.0)
+    # Forge weaker criteria after signing (min_pass_runs 0, drop target tests).
+    proposal.acceptance["min_pass_runs"] = 0
+    proposal.acceptance["target_tests"] = []
+    ev = evaluate_proposal(proposal, "[]", backend="jsonl")  # empty run
+    assert not ev.accepted
+    assert "signature" in ev.reason  # rejected before any acceptance logic runs
+
+
+def test_gate_floor_ignores_below_min_even_if_resigned(monkeypatch) -> None:
+    # Even a validly re-signed proposal can't set min_pass_runs below the floor.
+    from assaylab.attest.keys import resolve_key
+    from assaylab.llm import evaluate_proposal, propose_heal
+
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "hex:" + "fedcba9876543210" * 4)
+    proposal = propose_heal(_sig(), provider="template", created_ts=1.0)
+    target = proposal.acceptance["target_tests"][0]
+    proposal.acceptance["min_pass_runs"] = 0
+    proposal.sign(resolve_key())  # re-sign so the signature is valid
+    single = f"test_id,run_id,verdict\n{target},r1,pass\n"
+    assert not evaluate_proposal(proposal, single, backend="jsonl").accepted  # floor >= 2 holds
+
+
 def test_llm_modules_do_not_execute_generated_code() -> None:
     # No dynamic execution or process spawning anywhere in the llm package.
     pkg_dir = Path(gen_mod.__file__).parent

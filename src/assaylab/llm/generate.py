@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..attest.keys import key_id, resolve_key
 from ..models import FailureSignature
 from .models import Proposal, ProposalKind, prompt_sha
 from .provider import LLMProvider, resolve_provider
@@ -35,7 +36,7 @@ def propose_test(
     prompt = _build_prompt(sig)
     content = prov.complete(prompt, system=_SYSTEM)
     target_test = sig.tests[0] if sig.tests else sig.signature_id
-    return Proposal(
+    proposal = Proposal(
         kind=ProposalKind.TEST_GENERATION,
         target=sig.signature_id,
         title=f"regression test for {sig.exception_type or 'failure'} ({sig.signature_id})",
@@ -52,3 +53,6 @@ def propose_test(
             "expected_current_outcome": "fail",
         },
     )
+    key = resolve_key()
+    proposal.key_id = key_id(key)
+    return proposal.sign(key)

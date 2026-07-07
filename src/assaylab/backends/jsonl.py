@@ -14,6 +14,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import math
 from typing import Any
 
 from ..config import Settings
@@ -108,6 +109,8 @@ def _row_to_record(row: dict[str, Any]) -> TestRecord:
         duration = float(dur) if dur is not None else 0.0
     except (ValueError, TypeError):
         duration = 0.0
+    if not math.isfinite(duration) or duration < 0:
+        duration = 0.0  # reject inf/nan/negative from an untrusted source
     return TestRecord(
         test_id=str(_pick(row, "test_id") or "<unknown>"),
         outcome=outcome,

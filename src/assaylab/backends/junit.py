@@ -6,6 +6,8 @@ processing, closing XXE and billion-laughs. Input is size-capped before read.
 
 from __future__ import annotations
 
+import math
+
 from defusedxml.common import DefusedXmlException
 from defusedxml.ElementTree import ParseError, fromstring
 
@@ -70,6 +72,8 @@ def _case_to_record(case, suite_name: str) -> TestRecord:  # type: ignore[no-unt
         duration = float(case.get("time", "0") or 0)
     except ValueError:
         duration = 0.0
+    if not math.isfinite(duration) or duration < 0:
+        duration = 0.0  # reject inf/nan/negative from an untrusted report
 
     return TestRecord(
         test_id=test_id or "<unknown>",

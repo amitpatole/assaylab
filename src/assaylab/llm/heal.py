@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..attest.keys import key_id, resolve_key
 from ..models import FailureSignature
 from .models import Proposal, ProposalKind, prompt_sha
 from .provider import LLMProvider, resolve_provider
@@ -33,7 +34,7 @@ def propose_heal(
     prov = provider if isinstance(provider, LLMProvider) else resolve_provider(provider)
     prompt = _build_prompt(sig)
     content = prov.complete(prompt, system=_SYSTEM)
-    return Proposal(
+    proposal = Proposal(
         kind=ProposalKind.SELF_HEAL,
         target=sig.signature_id,
         title=f"heal flaky {sig.signature_id}",
@@ -51,3 +52,6 @@ def propose_heal(
             "expected_after": "not_fail",
         },
     )
+    key = resolve_key()
+    proposal.key_id = key_id(key)
+    return proposal.sign(key)

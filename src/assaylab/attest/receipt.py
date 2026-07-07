@@ -13,7 +13,7 @@ import hashlib
 import hmac
 import json
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 SCHEMA = "assaylab.selection-receipt/1"
 
@@ -23,12 +23,16 @@ class Receipt(BaseModel):
 
     schema_id: str = SCHEMA
     tool_version: str = ""
-    created_ts: float = 0.0
+    # inf/nan are rejected on every float: they serialize differently under
+    # json.dumps (Infinity) vs pydantic model_dump_json (null), which would make
+    # the signed bytes diverge from the stored bytes (Finding 1). Refusing them
+    # keeps the signed form and the on-disk form identical.
+    created_ts: float = Field(default=0.0, allow_inf_nan=False)
     nonce: str = ""              # per-receipt uniqueness anchor (bound by the signature)
 
     objective: str = ""                     # "target_epsilon" | "time_budget"
-    target_epsilon: float | None = None
-    time_budget_s: float | None = None
+    target_epsilon: float | None = Field(default=None, allow_inf_nan=False)
+    time_budget_s: float | None = Field(default=None, allow_inf_nan=False)
 
     candidates_hash: str = ""               # sha256 of the canonical candidate set
     n_candidates: int = 0
@@ -37,11 +41,11 @@ class Receipt(BaseModel):
     skipped_hash: str = ""
     n_skipped: int = 0
 
-    epsilon: float = 0.0                    # confidence lost: P(a skipped test would have failed)
-    confidence: float = 1.0                 # 1 - epsilon
-    time_selected_s: float = 0.0
-    time_all_s: float = 0.0
-    speedup: float = 1.0
+    epsilon: float = Field(default=0.0, allow_inf_nan=False)
+    confidence: float = Field(default=1.0, allow_inf_nan=False)
+    time_selected_s: float = Field(default=0.0, allow_inf_nan=False)
+    time_all_s: float = Field(default=0.0, allow_inf_nan=False)
+    speedup: float = Field(default=1.0, allow_inf_nan=False)
 
     key_id: str = ""                        # which key signed this (non-secret)
     signature: str = ""                     # hex HMAC over the signed body
@@ -50,7 +54,8 @@ class Receipt(BaseModel):
     def signed_body(self) -> bytes:
         """Canonical bytes covered by the signature (everything but ``signature``)."""
         data = self.model_dump(exclude={"signature"})
-        return json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return json.dumps(data, sort_keys=True, separators=(",", ":"),
+                          allow_nan=False).encode("utf-8")
 
     def sign(self, key: bytes) -> Receipt:
         self.signature = hmac.new(key, self.signed_body(), hashlib.sha256).hexdigest()

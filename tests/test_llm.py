@@ -80,11 +80,21 @@ def test_reproduction_rejects_a_wrong_reason_failure() -> None:
 
 def test_heal_accepted_only_on_positive_evidence() -> None:
     proposal = propose_heal(_sig(), provider="template", created_ts=1.0)
-    # Target test present, passing >= 2 times, signature absent -> accepted.
-    healed = ('<testsuite name="s">'
-              '<testcase classname="svc.Payment" name="test_charge"/>'
-              '<testcase classname="svc.Payment" name="test_charge"/></testsuite>')
-    assert evaluate_proposal(proposal, healed, backend="junit").accepted
+    # Target test passing across TWO DISTINCT reruns (run_id r1, r2), signature
+    # absent -> accepted. (JUnit has no run_id, so a heal needs tagged reruns.)
+    healed = ("test_id,run_id,verdict\n"
+              "svc.Payment::test_charge,r1,pass\n"
+              "svc.Payment::test_charge,r2,pass\n")
+    assert evaluate_proposal(proposal, healed, backend="jsonl").accepted
+
+
+def test_heal_rejects_duplicate_records_from_one_run() -> None:
+    # MED: two rows for the SAME run must not count as two reruns.
+    proposal = propose_heal(_sig(), provider="template", created_ts=1.0)
+    dup = ("test_id,run_id,verdict\n"
+           "svc.Payment::test_charge,r1,pass\n"
+           "svc.Payment::test_charge,r1,pass\n")  # same run_id twice
+    assert not evaluate_proposal(proposal, dup, backend="jsonl").accepted
 
 
 def test_heal_rejects_empty_skipped_and_single_pass() -> None:

@@ -113,6 +113,26 @@ def test_epsilon_is_rounded_up_not_understated() -> None:
     assert abs(sel.confidence - (1.0 - sel.epsilon)) < 1e-12  # derived, consistent
 
 
+def test_receipt_refuses_non_finite_floats() -> None:
+    # Round-2 Finding 1: inf/nan serialize differently in json.dumps vs pydantic,
+    # which would split signed vs stored bytes — the receipt must reject them.
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        Receipt(epsilon=float("inf"))
+    with pytest.raises(ValidationError):
+        Receipt(time_all_s=float("nan"))
+
+
+def test_ingest_sanitizes_non_finite_duration() -> None:
+    from assaylab.core import ingest
+
+    recs = ingest('<testsuite name="s"><testcase classname="s.A" name="x" time="inf"/></testsuite>',
+                  backend="junit")
+    assert recs[0].duration_s == 0.0  # inf rejected at ingest
+
+
 def test_receipt_carries_a_nonce(monkeypatch) -> None:
     # M4: each receipt is unique (uniqueness anchor bound by the signature).
     monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "hex:" + "0123456789abcdef" * 4)
