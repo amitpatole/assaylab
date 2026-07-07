@@ -61,5 +61,28 @@ The bound's residual assumptions — stated, not hidden:
 - **Independence** of test failures.
 - **Stationarity** of `q_t` (history predicts the next run).
 - Coverage only of **regression classes seen historically**.
-- HMAC is a **symmetric trust domain** (the verifier holds the key). Asymmetric
-  (ed25519) receipts are future work.
+
+## External verification (ed25519)
+
+HMAC receipts are a symmetric trust domain — the verifier needs the signing key,
+so it could also forge. For **external** verification, sign asymmetrically
+(needs the `crypto` extra): the producer signs with a private key and publishes
+the public key; anyone verifies against the (trusted, out-of-band) public key
+without any secret.
+
+```console
+$ pip install "assaylab[crypto]"
+$ assaylab pubkey                                   # share this with verifiers
+2fb218ec0e8e3993...
+$ assaylab select history.csv --target-epsilon 0.05 --alg ed25519 -o receipt.json
+$ assaylab verify receipt.json --pubkey 2fb218ec... --against history.csv
+receipt 9ab3d19b4dcd [ed25519]: signature VALID  (...)
+  reproduction: OK — reproduced: selection and confidence bound are genuine
+```
+
+The private key resolves from `ASSAYLAB_ED25519_PRIVATE_KEY` or a persisted
+per-install key; verifiers only ever need the public key.
+
+**Remaining residual:** receipts are stateless — a valid receipt re-verifies
+indefinitely (no built-in freshness/replay window; enforce that consumer-side
+with a nonce ledger + `created_ts` max-age if you need it).

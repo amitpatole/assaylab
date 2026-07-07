@@ -11,6 +11,7 @@ from ..config import Settings
 _OPTIONAL = [
     ("dataset fetch", "httpx", "pip install assaylab[datasets]"),
     ("LLM (claude)", "anthropic", "pip install assaylab[llm]"),
+    ("ed25519 receipts", "cryptography", "pip install assaylab[crypto]"),
     ("REST service", "fastapi", "pip install assaylab[serve]"),
     ("MCP server", "mcp", "pip install assaylab[mcp]"),
 ]

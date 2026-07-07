@@ -59,10 +59,16 @@ def candidates_hash(candidates: list[Candidate]) -> str:
     return hashlib.sha256(blob).hexdigest()
 
 
-def attest(selection: Selection, candidates: list[Candidate], *, created_ts: float) -> Receipt:
-    """Build and HMAC-sign a receipt binding the selection outcome."""
-    key = resolve_key()
+def attest(selection: Selection, candidates: list[Candidate], *, created_ts: float,
+           alg: str = "hmac-sha256") -> Receipt:
+    """Build and sign a receipt binding the selection outcome.
+
+    ``alg="hmac-sha256"`` (default) signs symmetrically; ``alg="ed25519"`` signs
+    with the per-install private key and embeds the public key so an external
+    consumer can verify without any secret (needs the ``crypto`` extra).
+    """
     receipt = Receipt(
+        alg=alg,
         tool_version=__version__,
         created_ts=created_ts,
         nonce=secrets.token_hex(8),
@@ -80,8 +86,17 @@ def attest(selection: Selection, candidates: list[Candidate], *, created_ts: flo
         time_selected_s=selection.time_selected_s,
         time_all_s=selection.time_all_s,
         speedup=selection.speedup,
-        key_id=key_id(key),
     )
+    if alg == "ed25519":
+        from ..attest import ed25519 as _ed
+
+        priv = _ed.resolve_private_key()
+        receipt.public_key = _ed.public_key_hex(priv)
+        receipt.key_id = _ed.key_id_from_public_hex(receipt.public_key)
+        receipt.signature = _ed.sign(priv, receipt.signed_body())
+        return receipt
+    key = resolve_key()
+    receipt.key_id = key_id(key)
     return receipt.sign(key)
 
 
@@ -92,6 +107,7 @@ def select_and_attest(
     time_budget_s: float | None = None,
     changed_files: set[str] | None = None,
     created_ts: float,
+    alg: str = "hmac-sha256",
     backend: str | None = None,
     settings: Settings | None = None,
 ) -> tuple[Selection, Receipt]:
@@ -99,7 +115,7 @@ def select_and_attest(
     records = ingest(source, backend=backend, settings=settings)
     candidates = candidates_from_history(records, changed_files=changed_files)
     selection = select(candidates, target_epsilon=target_epsilon, time_budget_s=time_budget_s)
-    receipt = attest(selection, candidates, created_ts=created_ts)
+    receipt = attest(selection, candidates, created_ts=created_ts, alg=alg)
     return selection, receipt
 
 
@@ -112,8 +128,22 @@ def load_receipt(path: str) -> Receipt:
     return Receipt.model_validate_json(p.read_text(encoding="utf-8"))
 
 
-def verify_receipt(receipt: Receipt) -> bool:
-    """Verify a receipt's signature against the resolved key (constant-time)."""
+def verify_receipt(receipt: Receipt, *, public_key: str | None = None) -> bool:
+    """Verify a receipt's signature.
+
+    HMAC receipts verify against the resolved per-install key. ed25519 receipts
+    verify against a TRUSTED public key the caller supplies (obtained out of
+    band); if none is supplied we fall back to the receipt's embedded public key
+    — convenient, but that only proves internal consistency, so a caller that
+    needs real authenticity must pass the pinned ``public_key``.
+    """
+    if receipt.alg == "ed25519":
+        from ..attest import ed25519 as _ed
+
+        trusted = public_key or receipt.public_key
+        if public_key and public_key != receipt.public_key:
+            return False  # receipt was signed by a different key than the trusted one
+        return _ed.verify(trusted, receipt.signed_body(), receipt.signature)
     return receipt.verify(resolve_key())
 
 

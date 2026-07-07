@@ -202,6 +202,8 @@ def select(
                                              help="Seconds of test time to spend."),
     changed: str | None = typer.Option(None, "--changed",
                                        help="Comma-separated changed files; their tests are forced-kept."),
+    alg: str = typer.Option("hmac-sha256", "--alg",
+                            help="hmac-sha256 (symmetric) | ed25519 (asymmetric, externally verifiable)."),
     backend: str | None = typer.Option(None, "--backend", "-b"),
     receipt_out: str | None = typer.Option(None, "--receipt", "-o", help="Write the signed receipt here."),
     as_json: bool = typer.Option(False, "--json"),
@@ -215,7 +217,8 @@ def select(
     changed_files = {c.strip() for c in changed.split(",")} if changed else None
     selection, receipt = select_and_attest(
         source, target_epsilon=target_epsilon, time_budget_s=time_budget,
-        changed_files=changed_files, created_ts=time.time(), backend=backend, settings=Settings())
+        changed_files=changed_files, created_ts=time.time(), alg=alg,
+        backend=backend, settings=Settings())
 
     if as_json:
         typer.echo(json.dumps({"selection": selection.model_dump(),
@@ -237,10 +240,20 @@ def select(
 
 
 @app.command()
+def pubkey() -> None:
+    """Print this install's ed25519 public key (hex) — share it with verifiers."""
+    from ..attest import ed25519 as _ed
+
+    typer.echo(_ed.public_key_hex())
+
+
+@app.command()
 def verify(
     receipt: str = typer.Argument(..., help="Path to a signed selection receipt (JSON)."),
     against: str | None = typer.Option(None, "--against",
                                        help="History source to RECOMPUTE the bound from (proves it's genuine)."),
+    pubkey: str | None = typer.Option(None, "--pubkey",
+                                      help="Trusted ed25519 public key (hex) for asymmetric receipts."),
     backend: str | None = typer.Option(None, "--backend", "-b"),
 ) -> None:
     """Verify a receipt's signature (constant-time); with --against, also recompute the bound."""
@@ -252,8 +265,8 @@ def verify(
     )
 
     rec = load_receipt(receipt)
-    sig_ok = verify_receipt(rec)
-    typer.echo(f"receipt {rec.key_id}: signature {'VALID' if sig_ok else 'INVALID'}  "
+    sig_ok = verify_receipt(rec, public_key=pubkey)
+    typer.echo(f"receipt {rec.key_id} [{rec.alg}]: signature {'VALID' if sig_ok else 'INVALID'}  "
                f"(epsilon {rec.epsilon:.4f}, confidence {rec.confidence:.4f}, "
                f"selected {rec.n_selected}/{rec.n_candidates}, speedup {rec.speedup}x)")
     repro_ok = True

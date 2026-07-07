@@ -22,6 +22,8 @@ class Receipt(BaseModel):
     """A signed test-selection receipt. ``signature`` is not part of the signed body."""
 
     schema_id: str = SCHEMA
+    alg: str = "hmac-sha256"        # "hmac-sha256" (symmetric) | "ed25519" (asymmetric)
+    public_key: str = ""            # hex ed25519 public key (asymmetric receipts only)
     tool_version: str = ""
     # inf/nan are rejected on every float: they serialize differently under
     # json.dumps (Infinity) vs pydantic model_dump_json (null), which would make
