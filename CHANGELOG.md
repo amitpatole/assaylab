@@ -3,9 +3,13 @@
 All notable changes to assaylab are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow SemVer.
 
-## [Unreleased] — P5: LLM-assisted test generation & self-healing (gated)
+## [0.2.0] — 2026-07-06
 
-### Added
+First feature release (P1–P5). Only a `0.0.1` placeholder preceded it on PyPI.
+
+### P5 — LLM-assisted test generation & self-healing (gated)
+
+#### Added
 - **LLM providers** (`assaylab.llm`) behind the `llm` extra: `claude` (Anthropic
   SDK, `claude-opus-4-8` default, key from `ANTHROPIC_API_KEY`) and `ollama`
   (local/hosted). A deterministic **`template` provider** needs no API key, so
@@ -19,7 +23,7 @@ All notable changes to assaylab are documented here. Format follows
 - **CLI**: `generate`, `heal` (both DRY-RUN), `accept` (grade a real run against
   a proposal; non-zero if rejected).
 
-### Security
+#### Security
 - **assaylab never executes or applies LLM-authored code.** Proposals are
   artifacts a human/CI runs in their own sandbox (per the org guardrail:
   isolate agent-generated code, never in-process `exec`). Pinned by
@@ -29,9 +33,9 @@ All notable changes to assaylab are documented here. Format follows
   env/`~/.config`, never hardcoded or logged; completions are size-capped and
   network calls timeout-bounded.
 
-## [Unreleased] — P4: validation-intelligence dashboard (Warm Paper)
+### P4 — validation-intelligence dashboard (Warm Paper)
 
-### Added
+#### Added
 - **Self-contained HTML report** (`assaylab.dashboard.build_report`, CLI
   `assaylab report`) — verdict, failure signatures + root cause, riskiest
   tests, and the **confidence/speedup frontier** as a dependency-free inline
@@ -43,9 +47,9 @@ All notable changes to assaylab are documented here. Format follows
 - `infer_backend` now treats non-`<` inline content as `jsonl` (CSV/JSON), so
   inline outcome logs parse correctly.
 
-## [Unreleased] — P3: attested test-selection with a verifiable confidence bound
+### P3 — attested test-selection with a verifiable confidence bound
 
-### Added
+#### Added
 - **Selection engine** (`assaylab.select`) — each candidate test has a
   detection probability `q` (from P2 forecast); skipping set `U` costs
   confidence `epsilon = 1 - prod(1-q)`. Greedy keep by value-density (`q`/sec)
@@ -63,13 +67,13 @@ All notable changes to assaylab are documented here. Format follows
 - Security regression tests: no default key, entropy floor, `0600` key file,
   per-install key independence, tamper/forgery detection, inert receipt load.
 
-### Security
+#### Security
 - Ran the forge-a-tighter-bound exploit against the built code: a tampered
   `epsilon` fails both signature verification and reproduction. Pinned by tests.
 
-## [Unreleased] — P2: ML-based root-cause analysis
+### P2 — ML-based root-cause analysis
 
-### Added
+#### Added
 - **Root-cause categorization** (`assaylab.rca.categorize`) — transparent,
   always-on classifier mapping a signature to a cause (null-deref, timeout,
   dependency, config, resource, concurrency, network, assertion, …) with a
@@ -88,9 +92,9 @@ All notable changes to assaylab are documented here. Format follows
 - Security regression tests pinning inert model loading (JSON-only, size-capped,
   schema-checked, no pickle).
 
-## [0.1.0] — P1: ingest + failure-signature clustering
+### P1 — ingest + failure-signature clustering
 
-### Added
+#### Added
 - **Ingestion** (`assaylab.ingest`) with pluggable backends:
   - `junit` — JUnit/xUnit XML (pytest, Maven Surefire, Gradle), parsed with
     `defusedxml` (XXE / billion-laughs closed, size-capped before read).
@@ -108,6 +112,6 @@ All notable changes to assaylab are documented here. Format follows
   `perceive`, `demo` (broken → FAIL → fixed → PASS, no API key), `doctor`.
 - Security regression tests pinning XXE + billion-laughs refusal.
 
-### Notes
+#### Notes
 - Contract-compatible with `agentsensory` (imported, never redefined).
 - Base wheel is light; REST / MCP / dataset-fetch live behind extras.
