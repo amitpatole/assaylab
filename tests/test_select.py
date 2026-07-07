@@ -148,6 +148,35 @@ def test_huge_durations_do_not_overflow_or_crash(monkeypatch) -> None:
     assert rec.verify(__import__("assaylab").resolve_key())
 
 
+def test_select_is_not_superquadratic() -> None:
+    # R4-1: an untrusted corpus of N failing tests must not drive O(n^3) compute.
+    # A linear-ish selection handles thousands of always-failing tests fast.
+    import time as _t
+
+    cands = [Candidate(f"t{i}", q=1.0, duration_s=1.0) for i in range(4000)]
+    start = _t.perf_counter()
+    sel = select(cands, target_epsilon=0.0)  # worst case: keep them all
+    elapsed = _t.perf_counter() - start
+    assert len(sel.selected) == 4000
+    assert elapsed < 5.0  # the old cubic loop took ~minutes at this n
+
+
+def test_select_epsilon_matches_direct_computation() -> None:
+    # The incremental epsilon must equal the fresh product (correctness of R4-1 fix).
+    cands = [Candidate(f"t{i}", q=q, duration_s=1.0)
+             for i, q in enumerate([0.9, 0.5, 0.1, 0.01, 1.0, 0.0])]
+    sel = select(cands, target_epsilon=0.3)
+    import math
+
+    from assaylab.select.engine import Candidate as C
+    from assaylab.select.engine import _epsilon_of_skipped
+
+    skipped = [c for c in cands if c.test_id in set(sel.skipped)]
+    expected = math.ceil(_epsilon_of_skipped(skipped) * 1_000_000) / 1_000_000
+    assert abs(sel.epsilon - expected) < 1e-9
+    _ = C  # silence unused if linter reorders
+
+
 def test_ingest_caps_huge_duration_magnitude() -> None:
     from assaylab.config import MAX_TEST_DURATION_S
     from assaylab.core import ingest

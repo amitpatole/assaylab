@@ -99,19 +99,24 @@ def evaluate_proposal(
 
         if any(r.outcome.failed for r in target_recs):
             return Evaluation(False, "a target test still failed after the heal")
-        # Count DISTINCT RERUNS, not (test, run) pairs — a multi-test signature
-        # must not be "healed" by a single run just because it touches >=2 tests.
-        # A rerun is identified by run_id (commit as fallback); both absent -> one
-        # run collapses to a single key and can't clear the floor. The any-fail
-        # check above already guarantees no target test failed in these runs.
-        run_keys = {(r.run_id or r.commit) for r in target_recs if r.outcome == Outcome.PASS}
-        passes = len(run_keys)
-        if passes < min_pass:
+        # EACH target test must pass in >= min_pass DISTINCT reruns. A rerun is
+        # keyed by run_id (commit fallback); both absent -> one run collapses to a
+        # single key and can't clear the floor. Requiring per-test coverage (not
+        # a union across tests) means a multi-test signature can't be "healed" by
+        # one run, and every affected test must actually be re-run.
+        per_test_runs: dict[str, set[str]] = {}
+        for r in target_recs:
+            if r.outcome == Outcome.PASS:
+                per_test_runs.setdefault(r.test_id, set()).add(r.run_id or r.commit)
+        insufficient = sorted(t for t in target_tests
+                              if len(per_test_runs.get(t, set())) < min_pass)
+        if insufficient:
             return Evaluation(
                 False,
-                f"insufficient distinct passing reruns ({passes} < {min_pass}) — a single run, "
-                f"skip, empty run, or duplicated record does not confirm a heal",
+                f"target test(s) {insufficient} lack {min_pass} distinct passing reruns — a single "
+                f"run, skip, empty run, or duplicated record does not confirm a heal",
             )
+        passes = min(len(per_test_runs[t]) for t in target_tests)
         if any(s.signature_id == sig_id for s in _sig.cluster(records)):
             return Evaluation(False, f"signature {sig_id} still present after the heal")
         return Evaluation(

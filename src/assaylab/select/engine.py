@@ -111,26 +111,40 @@ def select(
 
     ordered = sorted(candidates, key=lambda c: (not c.forced, -density(c), c.test_id))
 
+    # Track the epsilon over the not-yet-selected set INCREMENTALLY: a running
+    # product of (1 - q) plus a separate count of zero factors (q == 1, which
+    # would zero the product and can't be divided back out). Selecting a test
+    # removes its factor in O(1). This makes the loop O(n log n) after the sort
+    # instead of the previous O(n^3) rebuild — an untrusted corpus can no longer
+    # drive super-quadratic compute (R4-1).
+    zero_count = sum(1 for c in candidates if c.clamped_q >= 1.0)
+    prod_nonzero = 1.0
+    for c in candidates:
+        if c.clamped_q < 1.0:
+            prod_nonzero *= (1.0 - c.clamped_q)
+
+    def _current_epsilon() -> float:
+        return 1.0 - (0.0 if zero_count else prod_nonzero)
+
     selected: list[Candidate] = []
+    sel_ids: set[str] = set()
     time_used = 0.0
     for c in ordered:
-        # Epsilon if we stop here: skip everything not yet selected.
-        not_selected = [x for x in candidates if x.test_id not in {s.test_id for s in selected}]
-        cur_eps = _epsilon_of_skipped(not_selected)
-
-        # Target met -> no need to keep more (forced tests are always kept).
-        if target_epsilon is not None and not c.forced and cur_eps <= target_epsilon:
+        # Target met (over everything not yet selected) -> stop; forced kept.
+        if target_epsilon is not None and not c.forced and _current_epsilon() <= target_epsilon:
             break
-
         # Respect the time budget (forced tests are kept regardless).
         if (time_budget_s is not None and not c.forced
                 and time_used + c.clamped_duration > time_budget_s):
             continue
-
         selected.append(c)
+        sel_ids.add(c.test_id)
         time_used += c.clamped_duration
+        if c.clamped_q >= 1.0:
+            zero_count -= 1
+        else:
+            prod_nonzero /= (1.0 - c.clamped_q)
 
-    sel_ids = {c.test_id for c in selected}
     skipped = [c for c in candidates if c.test_id not in sel_ids]
     # Round epsilon UP (conservative: never understate the confidence lost), and
     # derive confidence from the reported epsilon so the two can't disagree (L6).

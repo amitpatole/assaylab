@@ -101,6 +101,9 @@ def test_heal_multitest_signature_needs_real_reruns(monkeypatch) -> None:
     # Same two tests across TWO runs -> accepted.
     two_runs = ("test_id,run_id,verdict\nt::a,r1,pass\nt::b,r1,pass\nt::a,r2,pass\nt::b,r2,pass\n")
     assert evaluate_proposal(proposal, two_runs, backend="jsonl").accepted
+    # Per-test coverage: t::a reran twice but t::b only once -> rejected (round-4 LOW).
+    partial = ("test_id,run_id,verdict\nt::a,r1,pass\nt::a,r2,pass\nt::b,r1,pass\n")
+    assert not evaluate_proposal(proposal, partial, backend="jsonl").accepted
 
 
 def test_heal_rejects_duplicate_records_from_one_run() -> None:
