@@ -37,8 +37,12 @@ jobs:
         with:
           path: site
 
+  # Deploy runs only once Pages is available (repo is public, or a paid plan)
+  # and the repo variable ENABLE_PAGES=true is set. Until then it is skipped —
+  # the strict build above still validates the docs on every push.
   deploy:
     needs: build
+    if: ${{ vars.ENABLE_PAGES == 'true' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
