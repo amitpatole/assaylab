@@ -3,6 +3,32 @@
 All notable changes to assaylab are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow SemVer.
 
+## [0.3.0] — 2026-07-06
+
+### Added
+- **ed25519 (asymmetric) receipts** (`crypto` extra) — sign with `--alg ed25519`;
+  a verifier checks against a trusted public key with **no secret** (`assaylab
+  pubkey` publishes it, `verify --pubkey`). Closes the HMAC symmetric-trust
+  residual.
+- **Evaluation harness** (`assaylab eval flakeflagger`) on the FlakeFlagger
+  dataset (Zenodo 4450723, CC BY 4.0): flaky-prediction F1 + **confidence-bound
+  validation** — on 26,765 real tests, a 35.9× speedup with realized miss rate
+  (0.049957) within the claimed bound (0.049958). See `docs/evaluation.md`.
+
+### Security (red-team: 5 adversarial rounds, ended empty)
+- **HIGH** — signing-key symlink/TOCTOU forgery closed (`O_EXCL|O_NOFOLLOW`,
+  owner + ancestor-symlink checks).
+- **HIGH** — the LLM gate no longer trusts a proposal's own criteria: proposals
+  are HMAC-signed at generation and refused at `accept` if tampered; heals need
+  per-test distinct reruns ≥ a hardcoded floor; reproductions must match the
+  signed original signature.
+- **HIGH** — O(n³) selection compute-DoS from an untrusted corpus → O(n log n)
+  incremental epsilon.
+- **MED** — non-finite / huge-magnitude durations can't overflow or split
+  signed-vs-stored bytes; env-key decoding is unambiguous; entropy floor rejects
+  degenerate keys; ollama token gated to loopback/opt-in-https with a byte cap.
+- Every fixed vector is pinned by a regression test.
+
 ## [0.2.0] — 2026-07-06
 
 First feature release (P1–P5). Only a `0.0.1` placeholder preceded it on PyPI.

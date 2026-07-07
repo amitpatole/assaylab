@@ -30,8 +30,13 @@ jobs:
           name: dist
           path: dist/
 
+  # The publish jobs use OIDC Trusted Publishing. They run only once the trusted
+  # publisher is configured on (Test)PyPI and the repo variable
+  # ENABLE_TRUSTED_PUBLISH=true is set. Until then they're skipped so a release
+  # tag still goes green; the build job always validates the artifacts.
   publish-testpypi:
     needs: build
+    if: ${{ vars.ENABLE_TRUSTED_PUBLISH == 'true' }}
     runs-on: ubuntu-latest
     environment: testpypi
     permissions:
@@ -48,6 +53,7 @@ jobs:
 
   publish-pypi:
     needs: publish-testpypi
+    if: ${{ vars.ENABLE_TRUSTED_PUBLISH == 'true' }}
     runs-on: ubuntu-latest
     environment: pypi
     permissions:

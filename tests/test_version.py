@@ -4,7 +4,7 @@ import assaylab
 
 
 def test_version() -> None:
-    assert assaylab.__version__ == "0.2.0"
+    assert assaylab.__version__ == "0.3.0"
 
 
 def test_version_matches_package_metadata() -> None:
