@@ -88,6 +88,21 @@ def test_heal_accepted_only_on_positive_evidence() -> None:
     assert evaluate_proposal(proposal, healed, backend="jsonl").accepted
 
 
+def test_heal_multitest_signature_needs_real_reruns(monkeypatch) -> None:
+    # R3-2: a signature spanning >=2 tests must NOT be "healed" by a single run
+    # just because it touches multiple tests — genuine reruns are required.
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "hex:" + "0123456789abcdef" * 4)
+    sig = FailureSignature(signature_id="multi", template="boom", exception_type="E",
+                           tests=["t::a", "t::b"], count=2, sample_message="boom")
+    proposal = propose_heal(sig, provider="template", created_ts=1.0)
+    # Two tests, ONE run (run_id r1), zero reruns -> must reject.
+    one_run = ("test_id,run_id,verdict\nt::a,r1,pass\nt::b,r1,pass\n")
+    assert not evaluate_proposal(proposal, one_run, backend="jsonl").accepted
+    # Same two tests across TWO runs -> accepted.
+    two_runs = ("test_id,run_id,verdict\nt::a,r1,pass\nt::b,r1,pass\nt::a,r2,pass\nt::b,r2,pass\n")
+    assert evaluate_proposal(proposal, two_runs, backend="jsonl").accepted
+
+
 def test_heal_rejects_duplicate_records_from_one_run() -> None:
     # MED: two rows for the SAME run must not count as two reruns.
     proposal = propose_heal(_sig(), provider="template", created_ts=1.0)

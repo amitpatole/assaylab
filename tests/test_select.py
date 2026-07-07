@@ -133,6 +133,30 @@ def test_ingest_sanitizes_non_finite_duration() -> None:
     assert recs[0].duration_s == 0.0  # inf rejected at ingest
 
 
+def test_huge_durations_do_not_overflow_or_crash(monkeypatch) -> None:
+    # R3-1: a corpus of huge finite durations must not overflow to inf/nan or
+    # crash attest with an uncaught ValidationError.
+    import math
+
+    from assaylab.select.service import attest
+
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "hex:" + "0123456789abcdef" * 4)
+    cands = [Candidate(f"t{i}", q=0.5, duration_s=1e308) for i in range(5)]
+    sel = select(cands, target_epsilon=0.1)
+    assert math.isfinite(sel.speedup) and math.isfinite(sel.time_all_s)
+    rec = attest(sel, cands, created_ts=1.0)  # must not raise
+    assert rec.verify(__import__("assaylab").resolve_key())
+
+
+def test_ingest_caps_huge_duration_magnitude() -> None:
+    from assaylab.config import MAX_TEST_DURATION_S
+    from assaylab.core import ingest
+
+    recs = ingest('<testsuite name="s"><testcase classname="s.A" name="x" time="1e308"/></testsuite>',
+                  backend="junit")
+    assert recs[0].duration_s == MAX_TEST_DURATION_S  # magnitude capped
+
+
 def test_receipt_carries_a_nonce(monkeypatch) -> None:
     # M4: each receipt is unique (uniqueness anchor bound by the signature).
     monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "hex:" + "0123456789abcdef" * 4)

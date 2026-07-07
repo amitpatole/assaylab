@@ -99,19 +99,18 @@ def evaluate_proposal(
 
         if any(r.outcome.failed for r in target_recs):
             return Evaluation(False, "a target test still failed after the heal")
-        # Count DISTINCT reruns, not raw records — duplicate rows for one run must
-        # not inflate the passing evidence. A rerun is a (test_id, run_id) pair;
-        # commit is the fallback key when run_id is absent.
-        distinct_passes = {
-            (r.test_id, r.run_id or r.commit)
-            for r in target_recs if r.outcome == Outcome.PASS
-        }
-        passes = len(distinct_passes)
+        # Count DISTINCT RERUNS, not (test, run) pairs — a multi-test signature
+        # must not be "healed" by a single run just because it touches >=2 tests.
+        # A rerun is identified by run_id (commit as fallback); both absent -> one
+        # run collapses to a single key and can't clear the floor. The any-fail
+        # check above already guarantees no target test failed in these runs.
+        run_keys = {(r.run_id or r.commit) for r in target_recs if r.outcome == Outcome.PASS}
+        passes = len(run_keys)
         if passes < min_pass:
             return Evaluation(
                 False,
-                f"insufficient distinct passing reruns ({passes} < {min_pass}) — a skip, single "
-                f"pass, empty run, or duplicated record does not confirm a heal",
+                f"insufficient distinct passing reruns ({passes} < {min_pass}) — a single run, "
+                f"skip, empty run, or duplicated record does not confirm a heal",
             )
         if any(s.signature_id == sig_id for s in _sig.cluster(records)):
             return Evaluation(False, f"signature {sig_id} still present after the heal")

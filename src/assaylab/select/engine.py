@@ -25,6 +25,8 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
 
+from ..config import MAX_TEST_DURATION_S
+
 
 @dataclass
 class Candidate:
@@ -38,6 +40,15 @@ class Candidate:
         if not math.isfinite(self.q):  # inf/nan from an untrusted corpus -> treat as no signal
             return 0.0
         return min(1.0, max(0.0, self.q))
+
+    @property
+    def clamped_duration(self) -> float:
+        # Finite, non-negative, magnitude-bounded — so aggregate durations can't
+        # overflow to inf/nan in the selection math (R3-1).
+        d = self.duration_s
+        if not math.isfinite(d) or d < 0:
+            return 0.0
+        return min(d, MAX_TEST_DURATION_S)
 
 
 class Selection(BaseModel):
@@ -59,6 +70,14 @@ def _epsilon_of_skipped(skipped: list[Candidate]) -> float:
     for c in skipped:
         retained *= (1.0 - c.clamped_q)
     return 1.0 - retained
+
+
+def _safe_speedup(time_all: float, time_used: float) -> float:
+    """Total, finite speedup — never inf/nan even on pathological durations."""
+    if time_used <= 0:
+        return 1.0
+    sp = round(time_all / time_used, 4)
+    return sp if math.isfinite(sp) else 1.0
 
 
 def select(
@@ -83,12 +102,12 @@ def select(
         if prev is None or c.clamped_q > prev.clamped_q:
             by_id[c.test_id] = c
     candidates = list(by_id.values())
-    time_all = sum(c.duration_s for c in candidates)
+    time_all = sum(c.clamped_duration for c in candidates)
 
     # Order: forced first, then by value density q/duration (desc). Keeping a
     # high-q, cheap test removes the most epsilon per second.
     def density(c: Candidate) -> float:
-        return c.clamped_q / c.duration_s if c.duration_s > 0 else c.clamped_q
+        return c.clamped_q / c.clamped_duration if c.clamped_duration > 0 else c.clamped_q
 
     ordered = sorted(candidates, key=lambda c: (not c.forced, -density(c), c.test_id))
 
@@ -105,11 +124,11 @@ def select(
 
         # Respect the time budget (forced tests are kept regardless).
         if (time_budget_s is not None and not c.forced
-                and time_used + c.duration_s > time_budget_s):
+                and time_used + c.clamped_duration > time_budget_s):
             continue
 
         selected.append(c)
-        time_used += c.duration_s
+        time_used += c.clamped_duration
 
     sel_ids = {c.test_id for c in selected}
     skipped = [c for c in candidates if c.test_id not in sel_ids]
@@ -126,7 +145,7 @@ def select(
         confidence=round(1.0 - eps, 6),
         time_selected_s=round(time_used, 4),
         time_all_s=round(time_all, 4),
-        speedup=round(time_all / time_used, 4) if time_used > 0 else 1.0,
+        speedup=_safe_speedup(time_all, time_used),
         objective=objective,
         target_epsilon=target_epsilon,
         time_budget_s=time_budget_s,

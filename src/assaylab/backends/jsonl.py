@@ -17,7 +17,7 @@ import json
 import math
 from typing import Any
 
-from ..config import Settings
+from ..config import MAX_TEST_DURATION_S, Settings
 from ..errors import UnsafeSourceError
 from ..models import Outcome, TestRecord
 from .base import read_source
@@ -111,6 +111,7 @@ def _row_to_record(row: dict[str, Any]) -> TestRecord:
         duration = 0.0
     if not math.isfinite(duration) or duration < 0:
         duration = 0.0  # reject inf/nan/negative from an untrusted source
+    duration = min(duration, MAX_TEST_DURATION_S)  # cap magnitude (overflow guard)
     return TestRecord(
         test_id=str(_pick(row, "test_id") or "<unknown>"),
         outcome=outcome,

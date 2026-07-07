@@ -11,7 +11,7 @@ import math
 from defusedxml.common import DefusedXmlException
 from defusedxml.ElementTree import ParseError, fromstring
 
-from ..config import Settings
+from ..config import MAX_TEST_DURATION_S, Settings
 from ..errors import UnsafeSourceError
 from ..models import Outcome, TestRecord
 from .base import read_source
@@ -74,6 +74,7 @@ def _case_to_record(case, suite_name: str) -> TestRecord:  # type: ignore[no-unt
         duration = 0.0
     if not math.isfinite(duration) or duration < 0:
         duration = 0.0  # reject inf/nan/negative from an untrusted report
+    duration = min(duration, MAX_TEST_DURATION_S)  # cap magnitude (overflow guard)
 
     return TestRecord(
         test_id=test_id or "<unknown>",

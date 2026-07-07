@@ -52,7 +52,7 @@ def candidates_hash(candidates: list[Candidate]) -> str:
     hash/precision drift (L5).
     """
     payload = [
-        {"t": c.test_id, "q": c.clamped_q, "d": c.duration_s, "f": c.forced}
+        {"t": c.test_id, "q": c.clamped_q, "d": c.clamped_duration, "f": c.forced}
         for c in sorted(candidates, key=lambda c: c.test_id)
     ]
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")

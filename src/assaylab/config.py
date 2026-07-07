@@ -12,6 +12,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Hard caps on attacker-controlled input, applied before allocation.
 DEFAULT_MAX_SOURCE_BYTES = 64 * 1024 * 1024  # 64 MiB per source file
 DEFAULT_MAX_RECORDS = 2_000_000  # per ingest call
+# Per-test duration cap (seconds). Bounds an untrusted corpus so aggregate
+# durations can't overflow float math to inf/nan (~116 days; no real test runs
+# this long, and 4096 * this stays far below float max).
+MAX_TEST_DURATION_S = 1e7
 
 
 class Settings(BaseSettings):
