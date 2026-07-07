@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use assaylab in academic work, please cite it as below."
+title: "assaylab: validation intelligence for CI"
+abstract: >-
+  assaylab grades test/CI output into a pass/warn/fail verdict: it clusters
+  failures into signatures, assigns a root cause, distinguishes flaky failures
+  from real ones with a learned model, scores per-test risk, and reduces a test
+  suite while emitting a signed, independently re-derivable confidence bound on
+  what was skipped. Contract-compatible with agentsensory.
+type: software
+authors:
+  - family-names: Patole
+    given-names: Amit
+    email: amit.patole@gmail.com
+    # orcid: "https://orcid.org/0000-0000-0000-0000"  # add if you want it on the DOI record
+repository-code: "https://github.com/amitpatole/assaylab"
+url: "https://amitpatole.github.io/assaylab/"
+license: MIT
+version: "0.2.0"
+date-released: "2026-07-06"
+keywords:
+  - continuous integration
+  - test selection
+  - flaky tests
+  - root cause analysis
+  - software testing
+  - verifiable confidence bound
+  - attestation
