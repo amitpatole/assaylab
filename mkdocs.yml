@@ -70,4 +70,5 @@ nav:
   - Root-cause analysis: rca.md
   - Attested selection: selection.md
   - Test generation & self-healing: llm.md
+  - Evaluation: evaluation.md
   - API: api.md

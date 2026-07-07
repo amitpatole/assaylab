@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://amitpatole.github.io/assaylab/selection/">
+        <link rel="canonical" href="https://amitpatole.github.io/assaylab/evaluation/">
       
       
-        <link rel="prev" href="../rca/">
+        <link rel="prev" href="../llm/">
       
       
-        <link rel="next" href="../llm/">
+        <link rel="next" href="../api/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Attested selection - assaylab</title>
+        <title>Evaluation - assaylab</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#attested-test-selection" class="md-skip">
+        <a href="#evaluation-on-public-data" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Attested selection
+              Evaluation
             
           </span>
         </div>
@@ -316,37 +316,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Attested selection
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../selection/" class="md-nav__link">
         
   
   
@@ -362,92 +335,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-confidence-bound" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The confidence bound
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#select-attest" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Select + attest
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify-signature-and-reproduction" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify — signature and reproduction
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#honest-limits" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Honest limits
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#external-verification-ed25519" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        External verification (ed25519)
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -483,10 +370,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../evaluation/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evaluation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -502,6 +416,59 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#result-1-confidence-bound-holds-on-real-data-the-headline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Result 1 — confidence bound holds on real data (the headline)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#result-2-flaky-prediction-from-features-lightweight-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Result 2 — flaky prediction from features (lightweight baseline)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#honesty-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Honesty notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -560,10 +527,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-confidence-bound" class="md-nav__link">
+  <a href="#result-1-confidence-bound-holds-on-real-data-the-headline" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The confidence bound
+        Result 1 — confidence bound holds on real data (the headline)
       
     </span>
   </a>
@@ -571,10 +538,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#select-attest" class="md-nav__link">
+  <a href="#result-2-flaky-prediction-from-features-lightweight-baseline" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Select + attest
+        Result 2 — flaky prediction from features (lightweight baseline)
       
     </span>
   </a>
@@ -582,43 +549,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#verify-signature-and-reproduction" class="md-nav__link">
+  <a href="#honesty-notes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verify — signature and reproduction
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#honest-limits" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Honest limits
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#external-verification-ed25519" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        External verification (ed25519)
+        Honesty notes
       
     </span>
   </a>
@@ -645,73 +579,53 @@
   
 
 
-<h1 id="attested-test-selection">Attested test-selection<a class="headerlink" href="#attested-test-selection" title="Permanent link">&para;</a></h1>
-<p>This is <code>assaylab</code>'s distinctive contribution: reduce a test suite <strong>and</strong> emit a
-signed receipt that bounds the confidence lost — a claim a consumer can
-independently re-derive.</p>
-<h2 id="the-confidence-bound">The confidence bound<a class="headerlink" href="#the-confidence-bound" title="Permanent link">&para;</a></h2>
-<p>Each candidate test <code>t</code> has a detection probability <code>q_t</code> — the modelled chance
-it fails (catches a regression) on this run, estimated from history (the P2
-forecast). If we run a subset <code>S</code> and skip <code>U = All \ S</code>, the probability that
-<em>at least one</em> skipped test would have failed is</p>
-<p>$$ \varepsilon = 1 - \prod_{t \in U}(1 - q_t) $$</p>
-<p>under an independence assumption. <code>ε</code> is the <strong>confidence lost</strong> by skipping.
-Selection keeps the highest value-density tests (<code>q_t</code> per second) until either
-<code>ε ≤ target</code> or the time budget is spent; the achieved <code>ε</code> is always reported.</p>
-<h2 id="select-attest">Select + attest<a class="headerlink" href="#select-attest" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">$ </span><span class="nb">export</span><span class="w"> </span><span class="nv">ASSAYLAB_SIGNING_KEY</span><span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets;print(secrets.token_hex(32))&quot;</span><span class="k">)</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">$ </span>assaylab<span class="w"> </span><span class="k">select</span><span class="w"> </span>history.csv<span class="w"> </span>--target-epsilon<span class="w"> </span><span class="m">0</span>.05<span class="w"> </span>--receipt<span class="w"> </span>receipt.json
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="go">selected 3/43 tests  speedup 9.0x  confidence 1.0000  (epsilon 0.0000)</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="go">  run:  svc.Hot::t0, svc.Hot::t1, svc.Hot::t2</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="go">  skip: svc.Cold::t0, svc.Cold::t1, svc.Cold::t10, ...</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="go">  receipt d9f197c5e91d sig daa3bd1ae81f…</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="go">  wrote signed receipt -&gt; receipt.json</span>
+<h1 id="evaluation-on-public-data">Evaluation on public data<a class="headerlink" href="#evaluation-on-public-data" title="Permanent link">&para;</a></h1>
+<p><code>assaylab</code> is evaluated on the <strong>FlakeFlagger</strong> dataset (Zenodo
+<a href="https://zenodo.org/records/4450723">4450723</a>, CC BY 4.0) — 26,765 tests across
+23 Java projects, each rerun 10,000 times to establish ground-truth flakiness.</p>
+<p>Run it yourself (only the small summary CSVs are fetched, never the multi-GB
+raw logs):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;assaylab[datasets]&quot;</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">$ </span>assaylab<span class="w"> </span><span class="nb">eval</span><span class="w"> </span>flakeflagger<span class="w"> </span>--fetch
 </code></pre></div>
-<p>Code-touched tests can be force-kept with <code>--changed a.py,b.py</code>.</p>
-<h2 id="verify-signature-and-reproduction">Verify — signature <em>and</em> reproduction<a class="headerlink" href="#verify-signature-and-reproduction" title="Permanent link">&para;</a></h2>
-<p>The receipt is HMAC-SHA256 over the <strong>outcome</strong> (inputs hash, selected/skipped
-hashes, and the computed <code>ε</code>), so the signature binds the real result. Because
-selection is deterministic in its committed inputs, a consumer can also <em>recompute</em>
-the bound from history and confirm it reproduces:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gp">$ </span>assaylab<span class="w"> </span>verify<span class="w"> </span>receipt.json<span class="w"> </span>--against<span class="w"> </span>history.csv
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="go">receipt d9f197c5e91d: signature VALID  (epsilon 0.0000, confidence 1.0000, selected 3/43, speedup 9.0x)</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="go">  reproduction: OK — reproduced: selection and confidence bound are genuine</span>
+<p>Or point at local copies with <code>--features test_features.csv --results test_results.csv</code>.</p>
+<h2 id="result-1-confidence-bound-holds-on-real-data-the-headline">Result 1 — confidence bound holds on real data (the headline)<a class="headerlink" href="#result-1-confidence-bound-holds-on-real-data-the-headline" title="Permanent link">&para;</a></h2>
+<p>Using each test's <strong>measured</strong> per-run failure probability (from its fail/pass
+counts over 10,000 reruns) as <code>q</code>, <code>assaylab select</code> was run at a target
+confidence-loss of <code>ε = 0.05</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>confidence-bound validation (target epsilon = 0.05):
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  26765 tests, speedup 35.878x, claimed epsilon 0.049958, realized miss rate 0.049957
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  bound holds (realized &lt;= claimed): True
 </code></pre></div>
-<p>Tamper with the receipt's <code>epsilon</code> and it fails closed — both the signature
-check and the reproduction reject a forged bound.</p>
-<h2 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h2>
+<p><strong>A 35.9× reduction in test-time, and the realized regression-miss rate
+(0.049957) stayed within the bound the receipt claimed (0.049958).</strong> The signed
+receipt's ε is not a marketing number — on real measured failure rates it
+matches reality.</p>
+<h2 id="result-2-flaky-prediction-from-features-lightweight-baseline">Result 2 — flaky prediction from features (lightweight baseline)<a class="headerlink" href="#result-2-flaky-prediction-from-features-lightweight-baseline" title="Permanent link">&para;</a></h2>
+<p>assaylab's built-in pure-Python logistic model, trained on FlakeFlagger's
+static/dynamic feature table (held-out 70/30 split, decision threshold tuned on
+the training split only):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>flaky prediction (assaylab logistic model on features, held-out split):
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  train=18633 test=7986 (positives=58)  threshold=0.13
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  precision=0.3409 recall=0.2586  F1=0.2941
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  confusion: tp=15 fp=29 fn=43 tn=7899
+</code></pre></div>
+<p>This is a deliberately lightweight baseline (no scikit-learn, JSON-serializable
+weights). The set is severely imbalanced — 0.7% positive — so a fixed 0.5
+threshold collapses to the majority class; tuning the threshold on the training
+split recovers a real precision/recall tradeoff. FlakeFlagger's own tuned
+random-forest reports higher F1 (~0.6); assaylab's baseline trades accuracy for
+a dependency-free, inspectable model. Class weighting is future work.</p>
+<h2 id="honesty-notes">Honesty notes<a class="headerlink" href="#honesty-notes" title="Permanent link">&para;</a></h2>
 <ul>
-<li>The signing key resolves from <code>ASSAYLAB_SIGNING_KEY</code> (hex/base64/raw, ≥16
-  bytes) → else a persisted per-installation key at <code>&lt;config&gt;/assaylab/signing.key</code>
-  written <code>0600</code>. <strong>Never a hardcoded default.</strong></li>
-<li>Verification is constant-time (<code>hmac.compare_digest</code>).</li>
+<li>Numbers above are <strong>real captured output</strong>, reproducible with the command
+  shown against the cited public data.</li>
+<li>The confidence-bound result validates the bound <em>given the measured <code>q</code></em> — it
+  does not eliminate the modelling assumptions (independence, <code>q</code> stationarity)
+  stated in <a href="../selection/">Attested selection</a>.</li>
+<li>RTPTorrent (commit→outcome linkage, CC BY 4.0) is the planned next corpus for
+  evaluating change-based selection; the ingestion schema already supports it.</li>
 </ul>
-<h2 id="honest-limits">Honest limits<a class="headerlink" href="#honest-limits" title="Permanent link">&para;</a></h2>
-<p>The bound's residual assumptions — stated, not hidden:</p>
-<ul>
-<li><strong>Independence</strong> of test failures.</li>
-<li><strong>Stationarity</strong> of <code>q_t</code> (history predicts the next run).</li>
-<li>Coverage only of <strong>regression classes seen historically</strong>.</li>
-</ul>
-<h2 id="external-verification-ed25519">External verification (ed25519)<a class="headerlink" href="#external-verification-ed25519" title="Permanent link">&para;</a></h2>
-<p>HMAC receipts are a symmetric trust domain — the verifier needs the signing key,
-so it could also forge. For <strong>external</strong> verification, sign asymmetrically
-(needs the <code>crypto</code> extra): the producer signs with a private key and publishes
-the public key; anyone verifies against the (trusted, out-of-band) public key
-without any secret.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;assaylab[crypto]&quot;</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="gp">$ </span>assaylab<span class="w"> </span>pubkey<span class="w">                                   </span><span class="c1"># share this with verifiers</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="go">2fb218ec0e8e3993...</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="gp">$ </span>assaylab<span class="w"> </span><span class="k">select</span><span class="w"> </span>history.csv<span class="w"> </span>--target-epsilon<span class="w"> </span><span class="m">0</span>.05<span class="w"> </span>--alg<span class="w"> </span>ed25519<span class="w"> </span>-o<span class="w"> </span>receipt.json
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="gp">$ </span>assaylab<span class="w"> </span>verify<span class="w"> </span>receipt.json<span class="w"> </span>--pubkey<span class="w"> </span>2fb218ec...<span class="w"> </span>--against<span class="w"> </span>history.csv
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="go">receipt 9ab3d19b4dcd [ed25519]: signature VALID  (...)</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="go">  reproduction: OK — reproduced: selection and confidence bound are genuine</span>
-</code></pre></div>
-<p>The private key resolves from <code>ASSAYLAB_ED25519_PRIVATE_KEY</code> or a persisted
-per-install key; verifiers only ever need the public key.</p>
-<p><strong>Remaining residual:</strong> receipts are stateless — a valid receipt re-verifies
-indefinitely (no built-in freshness/replay window; enforce that consumer-side
-with a nonce ledger + <code>created_ts</code> max-age if you need it).</p>
 
 
 
@@ -747,7 +661,7 @@ with a nonce ledger + <code>created_ts</code> max-age if you need it).</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../rca/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Root-cause analysis">
+          <a href="../llm/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Test generation &amp; self-healing">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -757,20 +671,20 @@ with a nonce ledger + <code>created_ts</code> max-age if you need it).</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Root-cause analysis
+                Test generation & self-healing
               </div>
             </div>
           </a>
         
         
           
-          <a href="../llm/" class="md-footer__link md-footer__link--next" aria-label="Next: Test generation &amp; self-healing">
+          <a href="../api/" class="md-footer__link md-footer__link--next" aria-label="Next: API">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Test generation & self-healing
+                API
               </div>
             </div>
             <div class="md-footer__button md-icon">

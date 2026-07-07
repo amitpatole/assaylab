@@ -373,6 +373,46 @@ def _emit_proposal(proposal, out: str | None) -> None:  # type: ignore[no-untype
         typer.echo(f"  wrote proposal -> {out}")
 
 
+@app.command("eval")
+def eval_cmd(
+    dataset: str = typer.Argument("flakeflagger", help="Dataset: flakeflagger."),
+    features: str | None = typer.Option(None, "--features", help="Path to test_features.csv."),
+    results: str | None = typer.Option(None, "--results", help="Path to test_results.csv."),
+    fetch: bool = typer.Option(False, "--fetch", help="Download the CSVs (needs assaylab[datasets])."),
+    target_epsilon: float = typer.Option(0.05, "--target-epsilon", "-e"),
+) -> None:
+    """Evaluate on a public dataset: flaky-prediction F1 + confidence-bound validation."""
+    if dataset != "flakeflagger":
+        typer.echo(f"unknown dataset {dataset!r}")
+        raise typer.Exit(code=2)
+    from ..backends import read_source
+    from ..eval import eval_confidence_bound, eval_flaky_classifier
+
+    if fetch:
+        from ..eval.fetch import fetch_flakeflagger
+        paths = fetch_flakeflagger()
+        features = features or str(paths["test_features.csv"])
+        results = results or str(paths["test_results.csv"])
+    if not features or not results:
+        typer.echo("provide --features and --results (or --fetch)")
+        raise typer.Exit(code=2)
+
+    typer.echo("== FlakeFlagger (Zenodo 4450723, CC BY 4.0) ==\n")
+    cm = eval_flaky_classifier(read_source(features, settings=Settings()))
+    typer.echo("flaky prediction (assaylab logistic model on features, held-out split):")
+    typer.echo(f"  train={cm.n_train} test={cm.n_test} (positives={cm.n_positive_test})  "
+               f"threshold={cm.threshold}")
+    typer.echo(f"  precision={cm.precision} recall={cm.recall}  F1={cm.f1}")
+    typer.echo(f"  confusion: tp={cm.tp} fp={cm.fp} fn={cm.fn} tn={cm.tn}\n")
+
+    bm = eval_confidence_bound(read_source(results, settings=Settings()),
+                               target_epsilon=target_epsilon)
+    typer.echo(f"confidence-bound validation (target epsilon = {bm.target_epsilon}):")
+    typer.echo(f"  {bm.n_tests} tests, speedup {bm.speedup}x, claimed epsilon "
+               f"{bm.claimed_epsilon}, realized miss rate {bm.realized_miss_rate}")
+    typer.echo(f"  bound holds (realized <= claimed): {bm.bound_holds}")
+
+
 @app.command()
 def demo() -> None:
     """Grade a synthetic broken suite (FAIL) then its fix (PASS). No API key, no network."""

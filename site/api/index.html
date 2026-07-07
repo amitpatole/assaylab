@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://amitpatole.github.io/assaylab/api/">
       
       
-        <link rel="prev" href="../llm/">
+        <link rel="prev" href="../evaluation/">
       
       
       
@@ -352,6 +352,33 @@
     
   
     Test generation & self-healing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evaluation
   
 
     
@@ -976,6 +1003,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Proposal">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#assaylab.llm.models.Proposal.signed_body" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        signed_body
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1608,6 +1652,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Proposal">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#assaylab.llm.models.Proposal.signed_body" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        signed_body
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -2859,11 +2920,16 @@ recompute <code>epsilon</code> from the committed inputs and check it matches.</
 <p>Never a hardcoded/default secret (a shipped default key lets anyone forge a
 receipt). Resolution order:</p>
 <ol>
-<li><code>ASSAYLAB_SIGNING_KEY</code> — hex, base64, or raw UTF-8 (&gt;= 16 bytes of entropy).</li>
+<li><code>ASSAYLAB_SIGNING_KEY</code> — an <strong>explicitly encoded</strong> key: <code>hex:&lt;hex&gt;</code>,
+   <code>base64:&lt;b64&gt;</code>, or <code>raw:&lt;utf8&gt;</code> (or a bare value, treated as raw). The
+   encoding is never guessed, so one string can't resolve to two different keys.
+   Must carry &gt;= 16 bytes and not be a degenerate (single-byte-repeated) value.</li>
 <li>A per-installation key persisted at <code>&lt;user_config&gt;/assaylab/signing.key</code>,
    created with :func:<code>secrets.token_bytes</code> and <code>0600</code> perms on first use.</li>
 </ol>
-<p>A malformed env key fails closed (raises) rather than silently falling back.</p>
+<p>Both paths <strong>refuse to follow symlinks and reject files not owned by the
+current user</strong>, closing the symlink/TOCTOU forgery vector. A malformed env key
+fails closed (raises) rather than silently falling back.</p>
 
 
 
@@ -3011,6 +3077,26 @@ verdict layer decides acceptance (see :mod:<code>assaylab.llm.gate</code>).</p>
 
 
 
+<div class="doc doc-object doc-function">
+
+
+<h5 id="assaylab.llm.models.Proposal.signed_body" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">signed_body</span>
+
+
+<a href="#assaylab.llm.models.Proposal.signed_body" class="headerlink" title="Permanent link">&para;</a></h5>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">signed_body</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Canonical bytes covered by the signature (everything but the signature).</p>
+
+
+    </div>
+
+</div>
+
 
 
   </div>
@@ -3129,6 +3215,10 @@ the bug; a heal counts only if the flaky signature stops failing.</p>
     <div class="doc doc-contents ">
 
         <p>Grade the returned run and decide whether the proposal is accepted.</p>
+<p>The proposal is treated as UNTRUSTED: its signature must verify (it was
+signed at generation by the tool that derived the criteria from a real
+signature), or we refuse to grade it. This stops a hand-crafted proposal
+JSON from weakening its own acceptance criteria.</p>
 
 
     </div>
@@ -3177,7 +3267,7 @@ the bug; a heal counts only if the flaky signature stops failing.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../llm/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Test generation &amp; self-healing">
+          <a href="../evaluation/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Evaluation">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3187,7 +3277,7 @@ the bug; a heal counts only if the flaky signature stops failing.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Test generation & self-healing
+                Evaluation
               </div>
             </div>
           </a>
