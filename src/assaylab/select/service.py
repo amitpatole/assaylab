@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import secrets
 from pathlib import Path
 
 from .. import __version__
@@ -44,9 +45,14 @@ def candidates_from_history(
 
 
 def candidates_hash(candidates: list[Candidate]) -> str:
-    """Stable hash committing to the candidate set AND its q/duration inputs."""
+    """Stable hash committing to the candidate set AND its q/duration inputs.
+
+    Hashes the *quantized* values ``select()`` actually consumes (``clamped_q`` /
+    ``dur``), so the committed digest uniquely pins the computed bound — no
+    hash/precision drift (L5).
+    """
     payload = [
-        {"t": c.test_id, "q": round(c.clamped_q, 6), "d": round(c.duration_s, 6), "f": c.forced}
+        {"t": c.test_id, "q": c.clamped_q, "d": c.duration_s, "f": c.forced}
         for c in sorted(candidates, key=lambda c: c.test_id)
     ]
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -59,6 +65,7 @@ def attest(selection: Selection, candidates: list[Candidate], *, created_ts: flo
     receipt = Receipt(
         tool_version=__version__,
         created_ts=created_ts,
+        nonce=secrets.token_hex(8),
         objective=selection.objective,
         target_epsilon=selection.target_epsilon,
         time_budget_s=selection.time_budget_s,

@@ -162,9 +162,10 @@ def train(
     import json as _json
     from pathlib import Path as _Path
 
+    from ..backends import read_source
     from ..rca.model import train as _train
 
-    raw = _Path(labeled).read_text(encoding="utf-8") if _Path(labeled).is_file() else labeled
+    raw = read_source(labeled, settings=Settings())  # size-capped read (path or inline)
     rows: list[dict] = []
     s = raw.lstrip()
     if s.startswith("["):
@@ -325,12 +326,11 @@ def accept(
     backend: str | None = typer.Option(None, "--backend", "-b"),
 ) -> None:
     """Grade a real run against a proposal's acceptance criterion. Non-zero if rejected."""
-    from pathlib import Path as _P
-
+    from ..backends import read_source
     from ..llm import evaluate_proposal
     from ..llm.models import Proposal
 
-    proposal = Proposal.model_validate_json(_P(proposal_path).read_text(encoding="utf-8"))
+    proposal = Proposal.model_validate_json(read_source(proposal_path, settings=Settings()))
     ev = evaluate_proposal(proposal, result, backend=backend, settings=Settings())
     typer.echo(f"{'ACCEPTED' if ev.accepted else 'REJECTED'}: {ev.reason}")
     raise typer.Exit(code=0 if ev.accepted else 1)

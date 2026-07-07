@@ -24,6 +24,7 @@ class Receipt(BaseModel):
     schema_id: str = SCHEMA
     tool_version: str = ""
     created_ts: float = 0.0
+    nonce: str = ""              # per-receipt uniqueness anchor (bound by the signature)
 
     objective: str = ""                     # "target_epsilon" | "time_budget"
     target_epsilon: float | None = None

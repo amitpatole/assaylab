@@ -20,6 +20,7 @@ are the receipt's residual assumptions, not guarantees.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
@@ -72,6 +73,14 @@ def select(
     """
     if not candidates:
         return Selection(objective="empty")
+    # Dedupe by test_id, keeping the highest-detection copy (closes L7: duplicate
+    # ids double-counting into epsilon). One row per distinct test.
+    by_id: dict[str, Candidate] = {}
+    for c in candidates:
+        prev = by_id.get(c.test_id)
+        if prev is None or c.clamped_q > prev.clamped_q:
+            by_id[c.test_id] = c
+    candidates = list(by_id.values())
     time_all = sum(c.duration_s for c in candidates)
 
     # Order: forced first, then by value density q/duration (desc). Keeping a
@@ -102,14 +111,16 @@ def select(
 
     sel_ids = {c.test_id for c in selected}
     skipped = [c for c in candidates if c.test_id not in sel_ids]
-    eps = _epsilon_of_skipped(skipped)
+    # Round epsilon UP (conservative: never understate the confidence lost), and
+    # derive confidence from the reported epsilon so the two can't disagree (L6).
+    eps_raw = _epsilon_of_skipped(skipped)
+    eps = math.ceil(eps_raw * 1_000_000) / 1_000_000
     objective = ("target_epsilon" if target_epsilon is not None
                  else "time_budget" if time_budget_s is not None else "all")
-
     return Selection(
         selected=sorted(sel_ids),
         skipped=sorted(c.test_id for c in skipped),
-        epsilon=round(eps, 6),
+        epsilon=eps,
         confidence=round(1.0 - eps, 6),
         time_selected_s=round(time_used, 4),
         time_all_s=round(time_all, 4),

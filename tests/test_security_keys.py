@@ -33,9 +33,52 @@ def test_env_key_below_entropy_floor_is_refused(monkeypatch) -> None:
         resolve_key()
 
 
-def test_env_key_hex_is_decoded(monkeypatch) -> None:
-    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "ab" * 16)  # 32 bytes hex
-    assert resolve_key() == bytes.fromhex("ab" * 16)
+def test_env_key_explicit_schemes_decode_unambiguously(monkeypatch) -> None:
+    import base64
+
+    varied = "0123456789abcdeffedcba9876543210"  # 16 bytes, many distinct
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", f"hex:{varied}")
+    assert resolve_key() == bytes.fromhex(varied)
+
+    raw = "correct horse battery staple!"  # >=16 bytes, many distinct
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", f"raw:{raw}")
+    assert resolve_key() == raw.encode()
+
+    b = base64.b64encode(b"an arbitrary 24-byte keyy").decode()
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", f"base64:{b}")
+    assert resolve_key() == b"an arbitrary 24-byte keyy"
+
+
+def test_unprefixed_env_key_is_raw_not_guessed(monkeypatch) -> None:
+    # M2: a bare value is raw UTF-8; it is NEVER re-interpreted as hex/base64.
+    val = "0123456789abcdef-not-hex-decoded"  # would be valid hex-ish but must stay raw
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", val)
+    assert resolve_key() == val.encode()
+
+
+def test_degenerate_env_key_is_refused(monkeypatch) -> None:
+    # M3: length alone isn't entropy — a single-byte-repeated key is rejected.
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "a" * 64)
+    with pytest.raises(ConfigError):
+        resolve_key()
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "hex:" + "00" * 32)
+    with pytest.raises(ConfigError):
+        resolve_key()
+
+
+def test_symlinked_key_file_is_refused(monkeypatch, tmp_path) -> None:
+    # H1: a signing.key that is a symlink (attacker-planted) must not be followed.
+    import os
+
+    cfg = tmp_path / "cfg"
+    cfg.mkdir()
+    attacker = tmp_path / "attacker_key"
+    attacker.write_bytes(b"attacker-controlled-32-byte-keyy")
+    os.symlink(attacker, cfg / "signing.key")
+    monkeypatch.delenv("ASSAYLAB_SIGNING_KEY", raising=False)
+    monkeypatch.setattr("assaylab.attest.keys.user_config_dir", lambda *_a, **_k: str(cfg))
+    with pytest.raises(ConfigError):
+        resolve_key()
 
 
 def test_persisted_key_is_created_0600(monkeypatch, tmp_path) -> None:

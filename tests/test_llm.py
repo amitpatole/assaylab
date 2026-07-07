@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from assaylab.core import cluster
 from assaylab.llm import (
     Proposal,
     ProposalKind,
@@ -10,18 +11,18 @@ from assaylab.llm import (
     propose_test,
     resolve_provider,
 )
-from assaylab.models import FailureSignature
+from assaylab.models import FailureSignature, Outcome, TestRecord
+
+_MSG = "NullPointerException: card was null"
+_STACK = 'File "checkout/pay.py", line 140, in charge'
 
 
 def _sig() -> FailureSignature:
-    return FailureSignature(
-        signature_id="abc123",
-        template="NullPointerException || card was null",
-        exception_type="NullPointerException",
-        tests=["svc.Payment::test_charge"],
-        count=3,
-        sample_message="NullPointerException: card was null",
-    )
+    # Derive from a real record so signature_id is the TRUE fingerprint — the
+    # gate now requires a reproduction to match this exact signature.
+    rec = TestRecord(test_id="svc.Payment::test_charge", outcome=Outcome.ERROR,
+                     message=_MSG, stacktrace=_STACK)
+    return cluster([rec])[0]
 
 
 def test_template_provider_is_available_keyfree() -> None:
@@ -57,25 +58,52 @@ def test_proposal_json_roundtrips() -> None:
 
 def test_generated_test_accepted_only_if_it_reproduces() -> None:
     proposal = propose_test(_sig(), provider="template", created_ts=1.0)
-    # Run where the target test FAILED -> reproduces -> accepted.
-    reproduces = ('<testsuite name="s"><testcase classname="svc.Payment" name="test_charge">'
-                  '<failure message="NullPointerException"/></testcase></testsuite>')
-    ev = evaluate_proposal(proposal, reproduces, backend="junit")
-    assert ev.accepted
+    # Target test fails WITH the original signature -> reproduces -> accepted.
+    reproduces = (f'<testsuite name="s"><testcase classname="svc.Payment" name="test_charge">'
+                  f'<error message="{_MSG}">{_STACK}</error></testcase></testsuite>')
+    assert evaluate_proposal(proposal, reproduces, backend="junit").accepted
 
-    # Run where it passed -> does NOT reproduce -> rejected.
-    passes = ('<testsuite name="s"><testcase classname="svc.Payment" name="test_charge"/>'
-              '</testsuite>')
-    ev2 = evaluate_proposal(proposal, passes, backend="junit")
-    assert not ev2.accepted
+    # Target test passed -> not a reproduction -> rejected.
+    passes = '<testsuite name="s"><testcase classname="svc.Payment" name="test_charge"/></testsuite>'
+    assert not evaluate_proposal(proposal, passes, backend="junit").accepted
 
 
-def test_heal_accepted_only_if_signature_stops_failing() -> None:
+def test_reproduction_rejects_a_wrong_reason_failure() -> None:
+    # #2: the target test fails, but with a DIFFERENT signature -> not genuine.
+    proposal = propose_test(_sig(), provider="template", created_ts=1.0)
+    wrong = ('<testsuite name="s"><testcase classname="svc.Payment" name="test_charge">'
+             '<failure message="AssertionError: totally unrelated"/></testcase></testsuite>')
+    ev = evaluate_proposal(proposal, wrong, backend="junit")
+    assert not ev.accepted
+    assert "different signature" in ev.reason
+
+
+def test_heal_accepted_only_on_positive_evidence() -> None:
     proposal = propose_heal(_sig(), provider="template", created_ts=1.0)
-    # After the heal, a run with no failures -> signature absent -> accepted.
-    clean = '<testsuite name="s"><testcase classname="svc.Payment" name="test_charge"/></testsuite>'
-    ev = evaluate_proposal(proposal, clean, backend="junit")
-    assert ev.accepted
+    # Target test present, passing >= 2 times, signature absent -> accepted.
+    healed = ('<testsuite name="s">'
+              '<testcase classname="svc.Payment" name="test_charge"/>'
+              '<testcase classname="svc.Payment" name="test_charge"/></testsuite>')
+    assert evaluate_proposal(proposal, healed, backend="junit").accepted
+
+
+def test_heal_rejects_empty_skipped_and_single_pass() -> None:
+    # HIGH #1: an empty run, a skip, or a single lucky pass must NOT confirm a heal.
+    proposal = propose_heal(_sig(), provider="template", created_ts=1.0)
+    empty = "[]"
+    assert not evaluate_proposal(proposal, empty, backend="jsonl").accepted
+    skipped = ('<testsuite name="s"><testcase classname="svc.Payment" name="test_charge">'
+               '<skipped/></testcase></testsuite>')
+    assert not evaluate_proposal(proposal, skipped, backend="junit").accepted
+    single = '<testsuite name="s"><testcase classname="svc.Payment" name="test_charge"/></testsuite>'
+    assert not evaluate_proposal(proposal, single, backend="junit").accepted
+
+
+def test_heal_rejects_if_target_still_fails() -> None:
+    proposal = propose_heal(_sig(), provider="template", created_ts=1.0)
+    still = (f'<testsuite name="s"><testcase classname="svc.Payment" name="test_charge">'
+             f'<error message="{_MSG}">{_STACK}</error></testcase></testsuite>')
+    assert not evaluate_proposal(proposal, still, backend="junit").accepted
 
 
 def test_unknown_provider_rejected() -> None:

@@ -60,7 +60,7 @@ def test_receipt_signs_and_verifies() -> None:
 
 
 def test_full_attest_then_verify_with_env_key(monkeypatch) -> None:
-    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "a" * 64)  # 32 hex bytes
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "hex:" + "0123456789abcdef" * 4)  # varied 32B
     sel = select(_cands(), target_epsilon=0.05)
     rec = attest(sel, _cands(), created_ts=1234.0)
     from assaylab.select.service import verify_receipt
@@ -94,6 +94,33 @@ def test_candidates_hash_is_stable_and_binds_inputs() -> None:
 
 def test_hash_ids_order_independent() -> None:
     assert hash_ids(["b", "a"]) == hash_ids(["a", "b"])
+
+
+# ---- red-team round-1 fixes -----------------------------------------------
+
+def test_duplicate_test_ids_do_not_inflate_epsilon() -> None:
+    # L7: two rows for the same test must count once, not twice.
+    dup = select([Candidate("A", q=0.9, duration_s=1.0), Candidate("A", q=0.9, duration_s=1.0)],
+                 target_epsilon=1.0)  # skip everything
+    single = select([Candidate("A", q=0.9, duration_s=1.0)], target_epsilon=1.0)
+    assert abs(dup.epsilon - single.epsilon) < 1e-9  # ~0.9, not ~0.99
+
+
+def test_epsilon_is_rounded_up_not_understated() -> None:
+    # L6: a tiny skipped q must not report epsilon 0.0 / confidence 1.0.
+    sel = select([Candidate("t", q=4e-7, duration_s=1.0)], target_epsilon=0.5)
+    assert sel.epsilon > 0.0
+    assert abs(sel.confidence - (1.0 - sel.epsilon)) < 1e-12  # derived, consistent
+
+
+def test_receipt_carries_a_nonce(monkeypatch) -> None:
+    # M4: each receipt is unique (uniqueness anchor bound by the signature).
+    monkeypatch.setenv("ASSAYLAB_SIGNING_KEY", "hex:" + "0123456789abcdef" * 4)
+    sel = select(_cands(), target_epsilon=0.05)
+    r1 = attest(sel, _cands(), created_ts=1.0)
+    r2 = attest(sel, _cands(), created_ts=1.0)
+    assert r1.nonce and r2.nonce and r1.nonce != r2.nonce
+    assert r1.signature != r2.signature  # nonce is inside the signed body
 
 
 def test_verify_reproduction_confirms_genuine_bound(monkeypatch) -> None:

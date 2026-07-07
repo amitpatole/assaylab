@@ -45,5 +45,6 @@ class ClaudeProvider:
         # Safety classifiers may decline — check before reading content.
         if getattr(resp, "stop_reason", None) == "refusal":
             return "# provider refused this request"
-        text = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
+        text = "".join(getattr(b, "text", "") for b in resp.content
+                        if getattr(b, "type", None) == "text")
         return _cap(text)

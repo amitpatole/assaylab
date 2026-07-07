@@ -46,6 +46,8 @@ def propose_heal(
         acceptance={
             "check": "no_longer_fails",
             "signature_id": sig.signature_id,
+            "target_tests": list(sig.tests),
+            "min_pass_runs": 2,
             "expected_after": "not_fail",
         },
     )
