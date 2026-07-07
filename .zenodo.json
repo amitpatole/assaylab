@@ -4,9 +4,12 @@
   "description": "assaylab grades test/CI output into a pass/warn/fail verdict: it clusters failures into signatures, assigns a root cause, distinguishes flaky failures from real ones with a learned model, scores per-test risk, and reduces a test suite while emitting a signed, independently re-derivable confidence bound on what was skipped. Contract-compatible with the agentsensory verdict language. MIT-licensed; see https://github.com/amitpatole/assaylab",
   "license": "MIT",
   "access_right": "open",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "creators": [
-    { "name": "Patole, Amit", "orcid": "0009-0009-6514-0913" }
+    {
+      "name": "Patole, Amit",
+      "orcid": "0009-0009-6514-0913"
+    }
   ],
   "keywords": [
     "continuous integration",
@@ -18,7 +21,15 @@
     "attestation"
   ],
   "related_identifiers": [
-    { "identifier": "https://github.com/amitpatole/assaylab", "relation": "isSupplementTo", "resource_type": "software" },
-    { "identifier": "https://pypi.org/project/assaylab/0.2.0/", "relation": "isIdenticalTo", "resource_type": "software" }
+    {
+      "identifier": "https://github.com/amitpatole/assaylab",
+      "relation": "isSupplementTo",
+      "resource_type": "software"
+    },
+    {
+      "identifier": "https://pypi.org/project/assaylab/0.3.0/",
+      "relation": "isIdenticalTo",
+      "resource_type": "software"
+    }
   ]
 }

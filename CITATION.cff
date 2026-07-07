@@ -16,7 +16,7 @@ authors:
 repository-code: "https://github.com/amitpatole/assaylab"
 url: "https://amitpatole.github.io/assaylab/"
 license: MIT
-version: "0.2.0"
+version: "0.3.0"
 date-released: "2026-07-06"
 keywords:
   - continuous integration
